@@ -1,0 +1,61 @@
+.dashboard-card {
+  background: #151a23;
+  border: 1px solid #2a2f3a;
+  border-radius: 16px;
+  padding: 16px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+  min-height: 110px;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
+  border-color: rgba(79, 140, 255, 0.6);
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.card-icon {
+  font-size: 20px;
+  opacity: 0.9;
+}
+
+.card-value {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.card-title {
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.card-subtitle {
+  font-size: 12px;
+  opacity: 0.6;
+  margin-top: 4px;
+}
+
+.card-hover {
+  position: absolute;
+  bottom: 10px;
+  right: 12px;
+  font-size: 11px;
+  opacity: 0;
+  transition: 0.2s ease;
+  color: #4f8cff;
+}
+
+.dashboard-card:hover .card-hover {
+  opacity: 1;
+}

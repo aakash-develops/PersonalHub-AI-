@@ -1,0 +1,195 @@
+/* src/App.css */
+
+:root {
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* PITCH BLACK BACKGROUNDS */
+  --bg: #000000;          /* Pure obsidian black for maximum contrast */
+  --bg-offset: #050508;   /* Subtle canvas offset tint */
+  --panel: #0d0d12;
+  --panel-blue: #0b111e;  /* Deep dark-blue panel color */
+  --border: #16161c;
+  --border-blue: #223152; /* Sleek structural border */
+  --primary: #4f8cff;
+  --radius: 12px;
+
+  /* High-Elevation Deep Shadow Combo */
+  --custom-elevation-shadow: rgba(0, 0, 0, 0.6) 0px 19px 38px, rgba(0, 0, 0, 0.4) 0px 15px 12px;
+}
+
+/* Master Layout Framework */
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg) !important;
+  color: #ffffff;
+  font-family: var(--font-sans);
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--bg);
+}
+
+/* PERFECTLY CENTRALIZED CONTAINER HUB */
+.dashboard-container {
+  flex: 1;
+  max-width: 1000px;      /* Slightly tightened grid layout to pull components closer together */
+  width: 100%;
+  margin: 0 auto;         /* Left/Right auto alignment pushes everything into perfect dead center */
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;    /* Vertically aligns children to center axes */
+  justify-content: center;
+  gap: 36px;
+}
+
+/* Horizontal Circular Metric Block */
+.progress-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 24px;
+  width: 100%;
+  max-width: 850px;       /* Keeps the twin circles beautifully compact and centralized */
+  margin: 0 auto;
+}
+
+/* Restored Crisp Sized Panels inside Obsidian Context */
+.progress-panel {
+  background: var(--panel-blue) !important;
+  border: 2px solid #4f8cff !important;
+  border-radius: var(--radius) !important;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  box-shadow: var(--custom-elevation-shadow);
+
+  /* Elastic Hover Transition Foundations */
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              border-color 0.2s ease,
+              box-shadow 0.2s ease;
+}
+
+/* Spring Bounce Scale Interactive Trigger */
+.progress-panel:hover {
+  transform: translateY(-4px) scale(1.02);
+  border-color: var(--primary) !important;
+  box-shadow: var(--custom-elevation-shadow), rgba(79, 140, 255, 0.2) 0px 0px 25px;
+}
+
+/* Hardware-Accelerated Entry Animation Physics */
+.page-fade-in {
+  animation: pageEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Layout Deck Utility for lower segments */
+.tracker-section-wrapper {
+  width: 100%;
+  max-width: 850px; /* Aligns seamlessly with width constraints of the circles above */
+}
+
+/* Project Page Layout Additions */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: pageEnter 0.2s ease-out;
+}
+
+.modal-content {
+  background: #0d0d12;
+  border: 2px solid #223152;
+  border-radius: 16px;
+  padding: 32px;
+  width: 100%;
+  max-width: 450px;
+  box-shadow: rgba(0, 0, 0, 0.6) 0px 19px 38px, rgba(0, 0, 0, 0.4) 0px 15px 12px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.form-input {
+  background: #14141a;
+  border: 1px solid #262632;
+  border-radius: 8px;
+  padding: 12px;
+  color: #ffffff;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #4f8cff;
+}
+
+.btn-primary {
+  background: #4f8cff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary:hover {
+  background: #3a7aff;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #8e8e9c;
+  border: 1px solid #262632;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #14141a;
+}

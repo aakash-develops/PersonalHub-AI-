@@ -1,0 +1,44 @@
+.circle-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.circle-wrapper svg {
+  transform: rotate(-90deg);
+}
+
+.circle-bg {
+  fill: none;
+  stroke: #2a2f3a;
+}
+
+.circle-progress {
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
+  filter: drop-shadow(0 0 6px rgba(79, 140, 255, 0.4));
+}
+
+.circle-content {
+  position: absolute;
+  text-align: center;
+  color: #ffffff;
+}
+
+.circle-value {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.circle-label {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+
+.circle-sublabel {
+  font-size: 10px;
+  opacity: 0.6;
+}

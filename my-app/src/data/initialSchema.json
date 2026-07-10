@@ -1,0 +1,40 @@
+{
+  "system_config": {
+    "current_active_week": 1,
+    "total_weeks": 8
+  },
+  "ml_roadmap": [
+    { "id": "rm-1", "week": 1, "title": "Week 1-2: Python, NumPy, Pandas & CSV Cleaning", "completed": false },
+    { "id": "rm-2", "week": 3, "title": "Week 3: Statistics Foundational Metrics", "completed": false },
+    { "id": "rm-3", "week": 4, "title": "Week 4: Linear & Logistic Regression, Splits", "completed": false },
+    { "id": "rm-4", "week": 5, "title": "Week 5: Decision Trees & Random Forests", "completed": false },
+    { "id": "rm-5", "week": 6, "title": "Week 6: K-Means Clustering & Features", "completed": false },
+    { "id": "rm-6", "week": 7, "title": "Week 7-8: End-to-End Freight ML Project Model", "completed": false }
+  ],
+  "daily_schedule_template": [
+    { "time": "07:00-08:00", "label": "Wake + routine", "category": "life" },
+    { "time": "08:00-08:45", "label": "Finnish listening & speaking", "category": "finnish" },
+    { "time": "08:45-10:15", "label": "ML theory study", "category": "ml" },
+    { "time": "10:30-12:00", "label": "ML coding practice", "category": "ml" },
+    { "time": "13:00-14:00", "label": "Career (CV, LinkedIn, jobs)", "category": "career" },
+    { "time": "14:00-15:30", "label": "ML project building", "category": "ml" },
+    { "time": "15:30-16:30", "label": "Exercise", "category": "life" },
+    { "time": "18:30-20:00", "label": "ML practice/project", "category": "ml" },
+    { "time": "21:00-22:00", "label": "Review & revision", "category": "ml" },
+    { "time": "22:00-23:30", "label": "Planning + rest", "category": "life" }
+  ],
+  "weekly_output_targets": {
+    "career_min_jobs": 5,
+    "github_min_commits": 2,
+    "finnish_completed": false
+  },
+  "daily_progress_clicks": {},
+  "modules_data": {
+    "projects": [],
+    "learning_notes": [],
+    "github_tracker": [],
+    "job_tracker": [],
+    "finnish_tracker": [],
+    "habit_tracker": {}
+  }
+}
