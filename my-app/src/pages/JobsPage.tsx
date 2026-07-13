@@ -11,6 +11,7 @@ interface JobItem {
   cvType?: string;
   contactPerson?: string;
   rejectedAfterInterview?: boolean;
+  submittedEmail?: string;
 }
 
 interface JobsPageProps {
@@ -48,6 +49,8 @@ const GlassJobCard: React.FC<{
     : job.status;
 
   const currentConfig = STATUS_CONFIG[configKey] || STATUS_CONFIG['Applied'];
+  const isIT = job.category === "IT / Software Engineering";
+  const renderedEmail = job.submittedEmail || (isIT ? "aakashbasnet.info@gmail.com" : "aakash.basnet74855@gmail.com");
 
   const renderUIDateTime = () => {
     if (!job.date_applied) return '';
@@ -73,7 +76,7 @@ const GlassJobCard: React.FC<{
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        minHeight: '190px',
+        minHeight: '215px',
         boxSizing: 'border-box',
         transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
         transform: isHovered ? 'translateY(-4px)' : 'translateY(0px)',
@@ -132,6 +135,23 @@ const GlassJobCard: React.FC<{
           </span>
         </div>
 
+        <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center' }}>
+          <span style={{
+            fontSize: '11.5px',
+            color: isIT ? '#b388ff' : '#82b1ff',
+            background: isIT ? 'rgba(179, 136, 255, 0.08)' : 'rgba(130, 177, 255, 0.08)',
+            border: isIT ? '1px solid rgba(179, 136, 255, 0.2)' : '1px solid rgba(130, 177, 255, 0.2)',
+            padding: '4px 8px',
+            borderRadius: '6px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            letterSpacing: '0.2px'
+          }}>
+            📧 <span style={{ fontFamily: 'monospace' }}>{renderedEmail}</span>
+          </span>
+        </div>
+
         {job.contactPerson && (
           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '12px' }}>
             👤 {job.contactPerson}
@@ -173,6 +193,16 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
   const [contactPerson, setContactPerson] = useState('');
   const [showHiredMessage, setShowHiredMessage] = useState(false);
   const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST'>('NEWEST');
+  const [activeTab, setActiveTab] = useState<'ALL' | 'IT' | 'LABOR'>('ALL');
+
+  // Custom Dialog Modal Form States
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+  const [modalEmailInput, setModalEmailInput] = useState('');
+
+  const [rememberedEmails, setRememberedEmails] = useState<Record<string, string>>(() => {
+    const savedMapping = localStorage.getItem('remembered_category_emails');
+    return savedMapping ? JSON.parse(savedMapping) : {};
+  });
 
   const [localJobs, setLocalJobs] = useState<JobItem[]>(() => {
     const saved = localStorage.getItem('tracked_jobs');
@@ -191,10 +221,33 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
     localStorage.setItem('tracked_jobs', JSON.stringify(localJobs));
   }, [localJobs]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    localStorage.setItem('remembered_category_emails', JSON.stringify(rememberedEmails));
+  }, [rememberedEmails]);
+
+  // Main intercepting submission flow
+  const handleSubmitClick = (e: React.FormEvent) => {
     e.preventDefault();
     if (!company.trim() || !role.trim()) return;
 
+    const previouslySavedEmail = rememberedEmails[category];
+
+    if (previouslySavedEmail) {
+      // Setup direct submission bypassing dialogue box entirely
+      executeJobSave(previouslySavedEmail);
+    } else {
+      // Trigger dynamic custom dialogue UI layout frame
+      const standardSuggestion = category === "IT / Software Engineering"
+        ? "aakashbasnet.info@gmail.com"
+        : "aakash.basnet74855@gmail.com";
+
+      setModalEmailInput(standardSuggestion);
+      setIsEmailModalOpen(true);
+    }
+  };
+
+  // Execution algorithm to package parameters safely into local tracking state
+  const executeJobSave = (emailToAttach: string) => {
     const currentTimestamp = new Date().toLocaleString('en-GB', {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit', second: '2-digit'
@@ -215,15 +268,32 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
       status: 'Applied',
       date_applied: currentTimestamp,
       cvType: automaticCVTag,
-      contactPerson: contactPerson.trim() || undefined
+      contactPerson: contactPerson.trim() || undefined,
+      submittedEmail: emailToAttach
     };
 
     onAddJob(newJob.company, newJob.role);
     setLocalJobs(prev => [newJob, ...prev]);
 
+    // Cleanup input nodes cleanly
     setCompany('');
     setRole('');
     setContactPerson('');
+  };
+
+  const handleModalSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const targetedEmail = modalEmailInput.trim();
+    if (!targetedEmail) return;
+
+    // Save configuration inside system context permanently
+    setRememberedEmails(prev => ({
+      ...prev,
+      [category]: targetedEmail
+    }));
+
+    setIsEmailModalOpen(false);
+    executeJobSave(targetedEmail);
   };
 
   const updateStatus = (jobId: string, nextStatus: 'Next Phase' | 'Rejected' | 'Hired') => {
@@ -253,31 +323,37 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
 
   const parseDate = (dateStr: string) => {
     if (!dateStr) return 0;
-
     const parts = dateStr.split(',');
     const cleanDate = parts[0].trim();
     const cleanTime = parts[1] ? parts[1].trim() : "00:00:00";
-
     const [day, month, year] = cleanDate.split('/').map(Number);
     const [hour, minute, second] = cleanTime.split(':').map(Number);
-
     if (!day || !month || !year) return 0;
-
     return new Date(year, month - 1, day, hour || 0, minute || 0, second || 0).getTime();
   };
 
-  const sortedJobs = useMemo(() => {
-    return [...localJobs].sort((a, b) => {
+  const categorizedJobs = useMemo(() => {
+    let sorted = [...localJobs].sort((a, b) => {
       const timeA = parseDate(a.date_applied);
       const timeB = parseDate(b.date_applied);
       return sortOrder === 'NEWEST' ? timeB - timeA : timeA - timeB;
     });
-  }, [localJobs, sortOrder]);
+
+    if (activeTab === 'IT') {
+      return sorted.filter(j => j.category === "IT / Software Engineering");
+    } else if (activeTab === 'LABOR') {
+      return sorted.filter(j => j.category !== "IT / Software Engineering");
+    }
+    return sorted;
+  }, [localJobs, sortOrder, activeTab]);
 
   const countPending = localJobs.filter(j => j.status === 'Applied').length;
   const countCallbacks = localJobs.filter(j => j.status === 'Next Phase').length;
   const countRejected = localJobs.filter(j => j.status === 'Rejected').length;
   const countHired = localJobs.filter(j => j.status === 'Hired').length;
+
+  const itCount = localJobs.filter(j => j.category === "IT / Software Engineering").length;
+  const laborCount = localJobs.filter(j => j.category !== "IT / Software Engineering").length;
 
   return (
     <div style={{ maxWidth: '1440px', margin: '0 auto', padding: 'clamp(20px, 4vw, 50px) clamp(16px, 3vw, 32px)', color: '#fff', fontFamily: 'system-ui, sans-serif', boxSizing: 'border-box' }}>
@@ -307,20 +383,45 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
           scrollbar-width: none;
           -ms-overflow-style: none;
         }
-        .grid-viewport::-webkit-scrollbar {
-          display: none;
-        }
+        .grid-viewport::-webkit-scrollbar { display: none; }
 
         .central-grid {
           display: grid;
-          /* 💡 FIXED TRACK CALCULATION: Forces columns to strictly adapt inside layout boundaries */
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 20px;
           width: 100%;
         }
 
-        .job-card {
-          width: 100%;
+        .profile-tab-bar {
+          display: flex;
+          background: rgba(13, 13, 18, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.06);
+          padding: 4px;
+          border-radius: 10px;
+          gap: 4px;
+        }
+
+        .profile-tab-btn {
+          padding: 8px 16px;
+          border: none;
+          background: transparent;
+          color: rgba(255, 255, 255, 0.5);
+          font-weight: 600;
+          font-size: 12px;
+          cursor: pointer;
+          border-radius: 7px;
+          transition: all 0.2s ease;
+        }
+
+        .profile-tab-btn.active {
+          background: #4f8cff;
+          color: white;
+          box-shadow: 0 4px 12px rgba(79, 140, 255, 0.25);
+        }
+
+        .profile-tab-btn.active.it-style {
+          background: #a855f7;
+          box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25);
         }
 
         @media (max-width: 1280px) {
@@ -336,6 +437,52 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
           .grid-viewport { max-height: none; overflow: visible; padding: 0; }
         }
       `}</style>
+
+      {/* --- PROFESSIONAL IN-APP DIALOG MODAL BOX --- */}
+      {isEmailModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(5, 5, 8, 0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', boxSizing: 'border-box' }}>
+          <form
+            onSubmit={handleModalSubmit}
+            style={{ background: '#0d0d12', border: '1px solid #2b2b36', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '440px', boxSizing: 'border-box', boxShadow: '0 24px 60px rgba(0,0,0,0.8), 0 0 1px 1px rgba(255,255,255,0.1) inset', display: 'flex', flexDirection: 'column', gap: '18px' }}
+          >
+            <div>
+              <h4 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: 800, color: '#4f8cff', letterSpacing: '-0.4px' }}>Setup Category Channel</h4>
+              <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.5' }}>
+                First entry logged under <strong style={{ color: '#fff' }}>"{category}"</strong>. Assign the exact application email address to lock it into system memory.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', letterSpacing: '0.3px' }}>APPLICATION EMAIL ADDRESS</label>
+              <input
+                type="email"
+                value={modalEmailInput}
+                onChange={(e) => setModalEmailInput(e.target.value)}
+                required
+                autoFocus
+                placeholder="aakash@example.com"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '12px', background: '#14141a', border: '1px solid #3e3e4f', color: '#fff', borderRadius: '8px', fontSize: '14.5px', fontFamily: 'monospace' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+              <button
+                type="button"
+                onClick={() => setIsEmailModalOpen(false)}
+                style={{ flex: 1, padding: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                style={{ flex: 2, padding: '12px', background: '#4f8cff', border: 'none', color: '#fff', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 14px rgba(79, 140, 255, 0.3)' }}
+              >
+                Confirm & Remember
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {showHiredMessage && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(6, 6, 9, 0.96)', backdropFilter: 'blur(20px)', zIndex: 99999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '20px', boxSizing: 'border-box' }}>
@@ -372,7 +519,7 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
 
         <div className="content-split">
           <div style={{ position: 'sticky', top: '24px' }}>
-            <form onSubmit={handleSubmit} style={{ background: '#0d0d12', border: '1px solid #1f1f27', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxSizing: 'border-box', boxShadow: '0 12px 40px rgba(0,0,0,0.5)' }}>
+            <form onSubmit={handleSubmitClick} style={{ background: '#0d0d12', border: '1px solid #1f1f27', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxSizing: 'border-box', boxShadow: '0 12px 40px rgba(0,0,0,0.5)' }}>
               <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: 700, color: '#4f8cff' }}>Log Work Entry</h3>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
@@ -402,7 +549,20 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingRight: '4px' }}>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
+              <div className="profile-tab-bar">
+                <button onClick={() => setActiveTab('ALL')} className={`profile-tab-btn ${activeTab === 'ALL' ? 'active' : ''}`}>
+                  🌐 All Streams ({localJobs.length})
+                </button>
+                <button onClick={() => setActiveTab('IT')} className={`profile-tab-btn ${activeTab === 'IT' ? 'active it-style' : ''}`}>
+                  💻 Professional IT ({itCount})
+                </button>
+                <button onClick={() => setActiveTab('LABOR')} className={`profile-tab-btn ${activeTab === 'LABOR' ? 'active' : ''}`}>
+                  🔨 Labor Market ({laborCount})
+                </button>
+              </div>
+
               <button
                 onClick={() => setSortOrder(prev => prev === 'NEWEST' ? 'OLDEST' : 'NEWEST')}
                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '6px 12px', color: '#4f8cff', fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
@@ -413,13 +573,12 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
 
             <div className="grid-viewport">
               <div className="central-grid">
-                {sortedJobs.length === 0 ? (
-                  /* 💡 FIXED BOX-SIZING & OVERFLOW BUG */
+                {categorizedJobs.length === 0 ? (
                   <div style={{ width: '100%', gridColumn: '1 / -1', textAlign: 'center', padding: '60px 20px', color: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', background: 'rgba(13,13,18,0.2)', boxSizing: 'border-box' }}>
-                    No applications found in stream. Fill the form to log your first work entry.
+                    No applications found in this target profile. Adjust selection filters or submit entries.
                   </div>
                 ) : (
-                  sortedJobs.map(job => (
+                  categorizedJobs.map(job => (
                     <GlassJobCard key={job.id} job={job} onUpdateStatus={updateStatus} onDelete={deleteJob} />
                   ))
                 )}
