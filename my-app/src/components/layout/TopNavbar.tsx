@@ -14,7 +14,7 @@ const TopNavbar: React.FC<TopNavbarProps> = ({ currentWeek = 1 }) => {
   const location = useLocation();
 
   const navItems = [
-    { path: '/', label: 'Dashboard' },
+    { path: '/dashboard', label: 'Dashboard' },
     { path: '/daily', label: 'Daily Routine' },
     { path: '/projects', label: 'Projects' },
     { path: '/roadmap', label: 'ML Roadmap' },

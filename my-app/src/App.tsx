@@ -1,6 +1,6 @@
 // src/App.tsx
 import { useState, useEffect } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, useLocation } from 'react-router-dom'; // Added useLocation
 import './App.css';
 
 // 1. Data Schemas & Types
@@ -11,6 +11,7 @@ import type { AppDatabaseState } from './types/schema';
 import TopNavbar from './components/layout/TopNavbar';
 
 // 3. Operational Target Pages
+import MainEntrance from './pages/WelcomePage';
 import Dashboard from './pages/Dashboard';
 import DailyPage from './pages/DailyPage';
 import ProjectsPage from './pages/ProjectsPage';
@@ -23,6 +24,8 @@ import HistoryPage from './pages/HistoryPage';
 import GitHubPage from './pages/Github';
 
 export default function App() {
+  const location = useLocation(); // Hook into current path location tracking
+
   // 1. INITIAL BASE SKELETON CONFIGURATION FOR DATA SAFETY
   const [db, setDb] = useState<AppDatabaseState>(() => {
     return {
@@ -52,7 +55,6 @@ export default function App() {
     fetch('http://localhost:5000/api/db')
       .then((res) => res.json())
       .then((data) => {
-        // If the backend has a valid file, populate the app's state with it
         if (data && data.modules_data) {
           setDb(data);
         }
@@ -62,7 +64,6 @@ export default function App() {
 
   // 3. AUTOMATIC WRITE OPERATION TO DISK D: ON DETECTED STATE CHANGES
   useEffect(() => {
-    // Basic verification guard to prevent blank writes over file content arrays on baseline startup instantiation
     if (!db || (db.modules_data.learning_notes.length === 0 && db.modules_data.job_tracker.length === 0 && db.modules_data.finnish_tracker.length === 0)) {
       return;
     }
@@ -211,12 +212,20 @@ export default function App() {
     habitConsistencyStr: `${habitConsistency}%`
   };
 
+  // Check if we are currently standing on the root welcome portal path
+  const isSplashPage = location.pathname === '/';
+
   return (
     <div className="app">
-      <TopNavbar currentWeek={db.system_config?.current_active_week} />
+      {/* 🛠️ CONDITIONAL NAVBAR RENDERING: Hidden completely on welcome portal splash path */}
+      {!isSplashPage && <TopNavbar currentWeek={db.system_config?.current_active_week} />}
 
       <Routes>
-        <Route path="/" element={<Dashboard db={db} metrics={dashboardMetrics} />} />
+        {/* Splash View Entrance */}
+        <Route path="/" element={<MainEntrance />} />
+
+        {/* System Dashboard Panel Core */}
+        <Route path="/dashboard" element={<Dashboard db={db} metrics={dashboardMetrics} />} />
 
         <Route
           path="/daily"

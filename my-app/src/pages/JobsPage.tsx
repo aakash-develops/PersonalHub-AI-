@@ -1,5 +1,600 @@
-// src/pages/JobsPage.tsx
+// // src/pages/JobsPage.tsx
+// import React, { useState, useEffect, useMemo } from 'react';
+
+// interface JobItem {
+//   id: string;
+//   company: string;
+//   role: string;
+//   category?: string;
+//   status: 'Applied' | 'Next Phase' | 'Rejected' | 'Hired' | string;
+//   date_applied: string;
+//   cvType?: string;
+//   contactPerson?: string;
+//   rejectedAfterInterview?: boolean;
+//   submittedEmail?: string;
+// }
+
+// interface JobsPageProps {
+//   jobs: JobItem[];
+//   onAddJob: (company: string, role: string) => void;
+//   onDeleteJob?: (id: string) => void;
+// }
+
+// const JOB_CATEGORIES = [
+//   "Construction / Demolition",
+//   "Cleaning Services",
+//   "Farms & Agriculture",
+//   "Logistics / Warehouse",
+//   "IT / Software Engineering",
+//   "General Labor / Other"
+// ];
+
+// const STATUS_CONFIG: Record<string, { text: string; color: string; bgGlow: string; border: string }> = {
+//   'Applied': { text: '⏳ Pending Answer', color: '#4f8cff', bgGlow: 'rgba(79, 140, 255, 0.05)', border: 'rgba(79, 140, 255, 0.25)' },
+//   'Next Phase': { text: '📞 Callback / Next Phase', color: '#a855f7', bgGlow: 'rgba(168, 85, 247, 0.05)', border: 'rgba(168, 85, 247, 0.25)' },
+//   'Hired': { text: '🏆 Hired!', color: '#10b981', bgGlow: 'rgba(16, 185, 129, 0.06)', border: 'rgba(16, 185, 129, 0.3)' },
+//   'Rejected_Upfront': { text: '✕ Applied & Rejected', color: '#ef4444', bgGlow: 'rgba(239, 68, 68, 0.04)', border: 'rgba(239, 68, 68, 0.2)' },
+//   'Rejected_Interview': { text: '✕ Interviewed & Rejected', color: '#f97316', bgGlow: 'rgba(249, 115, 22, 0.04)', border: 'rgba(249, 115, 22, 0.2)' },
+// };
+
+// const GlassJobCard: React.FC<{
+//   job: JobItem;
+//   onUpdateStatus: (id: string, status: 'Next Phase' | 'Rejected' | 'Hired') => void;
+//   onDelete: (id: string) => void;
+// }> = ({ job, onUpdateStatus, onDelete }) => {
+//   const [isHovered, setIsHovered] = useState(false);
+
+//   const configKey = job.status === 'Rejected'
+//     ? (job.rejectedAfterInterview ? 'Rejected_Interview' : 'Rejected_Upfront')
+//     : job.status;
+
+//   const currentConfig = STATUS_CONFIG[configKey] || STATUS_CONFIG['Applied'];
+//   const isIT = job.category === "IT / Software Engineering";
+//   const renderedEmail = job.submittedEmail || (isIT ? "aakashbasnet.info@gmail.com" : "aakash.basnet74855@gmail.com");
+
+//   const renderUIDateTime = () => {
+//     if (!job.date_applied) return '';
+//     const parts = job.date_applied.split(',');
+//     if (parts.length < 2) return parts[0];
+//     const timeParts = parts[1].trim().split(':');
+//     const shortTime = timeParts.length >= 2 ? `${timeParts[0]}:${timeParts[1]}` : parts[1].trim();
+//     return `${parts[0].trim()} @ ${shortTime}`;
+//   };
+
+//   return (
+//     <div
+//       onMouseEnter={() => setIsHovered(true)}
+//       onMouseLeave={() => setIsHovered(false)}
+//       className="job-card"
+//       style={{
+//         background: isHovered ? currentConfig.bgGlow : 'rgba(13, 13, 18, 0.65)',
+//         backdropFilter: 'blur(12px)',
+//         WebkitBackdropFilter: 'blur(12px)',
+//         borderRadius: '16px',
+//         border: `1px solid ${isHovered ? currentConfig.color : currentConfig.border}`,
+//         padding: '20px',
+//         display: 'flex',
+//         flexDirection: 'column',
+//         justifyContent: 'space-between',
+//         minHeight: '215px',
+//         boxSizing: 'border-box',
+//         transition: 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)',
+//         transform: isHovered ? 'translateY(-4px)' : 'translateY(0px)',
+//         boxShadow: isHovered
+//           ? `0 16px 30px rgba(0,0,0,0.6), 0 0 20px ${currentConfig.color}22`
+//           : `0 4px 16px rgba(0, 0, 0, 0.35)`,
+//       }}
+//     >
+//       <div>
+//         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+//           <h4 style={{ margin: '0', fontSize: '17px', fontWeight: '700', color: '#fff', letterSpacing: '-0.3px', wordBreak: 'break-word', flex: 1, paddingRight: '4px' }}>
+//             {job.role}
+//           </h4>
+
+//           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+//             <span style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.35)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,255,255,0.03)', padding: '3px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.03)' }}>
+//               🕒 {renderUIDateTime()}
+//             </span>
+
+//             <button
+//               onClick={() => onDelete(job.id)}
+//               title="Remove Application"
+//               style={{
+//                 background: 'transparent',
+//                 border: 'none',
+//                 color: 'rgba(255, 92, 117, 0.25)',
+//                 cursor: 'pointer',
+//                 fontSize: '11px',
+//                 padding: '4px',
+//                 display: 'flex',
+//                 alignItems: 'center',
+//                 justifyContent: 'center',
+//                 transition: 'all 0.2s ease',
+//                 borderRadius: '4px'
+//               }}
+//               onMouseEnter={(e) => {
+//                 e.currentTarget.style.color = '#ff5c75';
+//                 e.currentTarget.style.background = 'rgba(255, 92, 117, 0.1)';
+//               }}
+//               onMouseLeave={(e) => {
+//                 e.currentTarget.style.color = 'rgba(255, 92, 117, 0.25)';
+//                 e.currentTarget.style.background = 'transparent';
+//               }}
+//             >
+//               🗑️
+//             </button>
+//           </div>
+//         </div>
+
+//         <div style={{ fontSize: '14.5px', color: currentConfig.color, fontWeight: '600', marginBottom: '4px', transition: 'color 0.2s' }}>{job.company}</div>
+
+//         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center', marginTop: '4px' }}>
+//           <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>{job.category || "General Labor / Other"}</span>
+//           <span style={{ fontSize: '10px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.5)', padding: '1px 5px', borderRadius: '3px', border: '1px solid rgba(255,255,255,0.04)' }}>
+//             📄 {job.cvType || 'General Labor CV'}
+//           </span>
+//         </div>
+
+//         <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center' }}>
+//           <span style={{
+//             fontSize: '11.5px',
+//             color: isIT ? '#b388ff' : '#82b1ff',
+//             background: isIT ? 'rgba(179, 136, 255, 0.08)' : 'rgba(130, 177, 255, 0.08)',
+//             border: isIT ? '1px solid rgba(179, 136, 255, 0.2)' : '1px solid rgba(130, 177, 255, 0.2)',
+//             padding: '4px 8px',
+//             borderRadius: '6px',
+//             display: 'inline-flex',
+//             alignItems: 'center',
+//             gap: '6px',
+//             letterSpacing: '0.2px'
+//           }}>
+//             📧 <span style={{ fontFamily: 'monospace' }}>{renderedEmail}</span>
+//           </span>
+//         </div>
+
+//         {job.contactPerson && (
+//           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '12px' }}>
+//             👤 {job.contactPerson}
+//           </div>
+//         )}
+//       </div>
+
+//       <div style={{ marginTop: '18px' }}>
+//         {job.status !== 'Hired' && (
+//           <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
+//             {job.status === 'Applied' && (
+//               <button onClick={() => onUpdateStatus(job.id, 'Next Phase')} style={{ flex: 1, padding: '8px', background: 'rgba(168, 85, 247, 0.15)', border: '1px solid #a855f7', color: '#d8b4fe', borderRadius: '7px', fontSize: '11.5px', fontWeight: 'bold', cursor: 'pointer' }}>
+//                 Callback
+//               </button>
+//             )}
+//             {job.status === 'Next Phase' && (
+//               <button onClick={() => onUpdateStatus(job.id, 'Hired')} style={{ flex: 1, padding: '8px', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', color: '#a7f3d0', borderRadius: '7px', fontSize: '11.5px', fontWeight: 'bold', cursor: 'pointer' }}>
+//                 Hired
+//               </button>
+//             )}
+//             <button onClick={() => onUpdateStatus(job.id, 'Rejected')} style={{ padding: '8px 16px', background: 'transparent', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#fca5a5', borderRadius: '7px', fontSize: '11.5px', cursor: 'pointer' }}>
+//               ✕
+//             </button>
+//           </div>
+//         )}
+
+//         <div style={{ fontSize: '12px', fontWeight: '700', color: currentConfig.color, borderTop: `1px solid ${currentConfig.color}33`, paddingTop: '10px', letterSpacing: '0.3px', transition: 'all 0.2s' }}>
+//           {currentConfig.text}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob }) => {
+//   const [company, setCompany] = useState('');
+//   const [role, setRole] = useState('');
+//   const [category, setCategory] = useState('Construction / Demolition');
+//   const [contactPerson, setContactPerson] = useState('');
+//   const [showHiredMessage, setShowHiredMessage] = useState(false);
+//   const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST'>('NEWEST');
+//   const [activeTab, setActiveTab] = useState<'ALL' | 'IT' | 'LABOR'>('ALL');
+
+//   // Custom Dialog Modal Form States
+//   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+//   const [modalEmailInput, setModalEmailInput] = useState('');
+
+//   const [rememberedEmails, setRememberedEmails] = useState<Record<string, string>>(() => {
+//     const savedMapping = localStorage.getItem('remembered_category_emails');
+//     return savedMapping ? JSON.parse(savedMapping) : {};
+//   });
+
+//   const [localJobs, setLocalJobs] = useState<JobItem[]>(() => {
+//     const saved = localStorage.getItem('tracked_jobs');
+//     if (saved) return JSON.parse(saved);
+//     return jobs.length > 0 ? jobs : [];
+//   });
+
+//   useEffect(() => {
+//     const saved = localStorage.getItem('tracked_jobs');
+//     if (!saved && jobs.length > 0 && localJobs.length === 0) {
+//       setLocalJobs(jobs);
+//     }
+//   }, [jobs, localJobs.length]);
+
+//   useEffect(() => {
+//     localStorage.setItem('tracked_jobs', JSON.stringify(localJobs));
+//   }, [localJobs]);
+
+//   useEffect(() => {
+//     localStorage.setItem('remembered_category_emails', JSON.stringify(rememberedEmails));
+//   }, [rememberedEmails]);
+
+//   // Main intercepting submission flow
+//   const handleSubmitClick = (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!company.trim() || !role.trim()) return;
+
+//     const previouslySavedEmail = rememberedEmails[category];
+
+//     if (previouslySavedEmail) {
+//       // Setup direct submission bypassing dialogue box entirely
+//       executeJobSave(previouslySavedEmail);
+//     } else {
+//       // Trigger dynamic custom dialogue UI layout frame
+//       const standardSuggestion = category === "IT / Software Engineering"
+//         ? "aakashbasnet.info@gmail.com"
+//         : "aakash.basnet74855@gmail.com";
+
+//       setModalEmailInput(standardSuggestion);
+//       setIsEmailModalOpen(true);
+//     }
+//   };
+
+//   // Execution algorithm to package parameters safely into local tracking state
+//   const executeJobSave = (emailToAttach: string) => {
+//     const currentTimestamp = new Date().toLocaleString('en-GB', {
+//       day: '2-digit', month: '2-digit', year: 'numeric',
+//       hour: '2-digit', minute: '2-digit', second: '2-digit'
+//     });
+
+//     let automaticCVTag = "General Labor CV";
+//     if (category === "IT / Software Engineering") {
+//       automaticCVTag = "Technical IT Portfolio";
+//     } else if (category === "Cleaning Services") {
+//       automaticCVTag = "Cleaning Services CV";
+//     }
+
+//     const newJob: JobItem = {
+//       id: `j-${Date.now()}`,
+//       company: company.trim(),
+//       role: role.trim(),
+//       category,
+//       status: 'Applied',
+//       date_applied: currentTimestamp,
+//       cvType: automaticCVTag,
+//       contactPerson: contactPerson.trim() || undefined,
+//       submittedEmail: emailToAttach
+//     };
+
+//     onAddJob(newJob.company, newJob.role);
+//     setLocalJobs(prev => [newJob, ...prev]);
+
+//     // Cleanup input nodes cleanly
+//     setCompany('');
+//     setRole('');
+//     setContactPerson('');
+//   };
+
+//   const handleModalSubmit = (e: React.FormEvent) => {
+//     e.preventDefault();
+//     const targetedEmail = modalEmailInput.trim();
+//     if (!targetedEmail) return;
+
+//     // Save configuration inside system context permanently
+//     setRememberedEmails(prev => ({
+//       ...prev,
+//       [category]: targetedEmail
+//     }));
+
+//     setIsEmailModalOpen(false);
+//     executeJobSave(targetedEmail);
+//   };
+
+//   const updateStatus = (jobId: string, nextStatus: 'Next Phase' | 'Rejected' | 'Hired') => {
+//     const updated = localJobs.map(j => {
+//       if (j.id === jobId) {
+//         if (nextStatus === 'Hired') setShowHiredMessage(true);
+//         return {
+//           ...j,
+//           status: nextStatus,
+//           rejectedAfterInterview: nextStatus === 'Rejected' && j.status === 'Next Phase' ? true : j.rejectedAfterInterview
+//         };
+//       }
+//       return j;
+//     });
+//     setLocalJobs(updated);
+//   };
+
+//   const deleteJob = (jobId: string) => {
+//     const confirmed = window.confirm("Are you sure you want to permanently delete this job application tracing record?");
+//     if (!confirmed) return;
+
+//     setLocalJobs(prev => prev.filter(j => j.id !== jobId));
+//     if (onDeleteJob) {
+//       onDeleteJob(jobId);
+//     }
+//   };
+
+//   const parseDate = (dateStr: string) => {
+//     if (!dateStr) return 0;
+//     const parts = dateStr.split(',');
+//     const cleanDate = parts[0].trim();
+//     const cleanTime = parts[1] ? parts[1].trim() : "00:00:00";
+//     const [day, month, year] = cleanDate.split('/').map(Number);
+//     const [hour, minute, second] = cleanTime.split(':').map(Number);
+//     if (!day || !month || !year) return 0;
+//     return new Date(year, month - 1, day, hour || 0, minute || 0, second || 0).getTime();
+//   };
+
+//   const categorizedJobs = useMemo(() => {
+//     let sorted = [...localJobs].sort((a, b) => {
+//       const timeA = parseDate(a.date_applied);
+//       const timeB = parseDate(b.date_applied);
+//       return sortOrder === 'NEWEST' ? timeB - timeA : timeA - timeB;
+//     });
+
+//     if (activeTab === 'IT') {
+//       return sorted.filter(j => j.category === "IT / Software Engineering");
+//     } else if (activeTab === 'LABOR') {
+//       return sorted.filter(j => j.category !== "IT / Software Engineering");
+//     }
+//     return sorted;
+//   }, [localJobs, sortOrder, activeTab]);
+
+//   const countPending = localJobs.filter(j => j.status === 'Applied').length;
+//   const countCallbacks = localJobs.filter(j => j.status === 'Next Phase').length;
+//   const countRejected = localJobs.filter(j => j.status === 'Rejected').length;
+//   const countHired = localJobs.filter(j => j.status === 'Hired').length;
+
+//   const itCount = localJobs.filter(j => j.category === "IT / Software Engineering").length;
+//   const laborCount = localJobs.filter(j => j.category !== "IT / Software Engineering").length;
+
+//   return (
+//     <div style={{ maxWidth: '1440px', margin: '0 auto', padding: 'clamp(20px, 4vw, 50px) clamp(16px, 3vw, 32px)', color: '#fff', fontFamily: 'system-ui, sans-serif', boxSizing: 'border-box' }}>
+
+//       <style>{`
+//         .central-dashboard { display: flex; flex-direction: column; gap: 32px; align-items: center; width: 100%; }
+//         .metrics-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; width: 100%; max-width: 1100px; background: rgba(20, 20, 26, 0.4); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 16px; box-sizing: border-box; }
+//         .metric-card { text-align: center; padding: 10px; }
+//         .metric-num { font-size: 24px; font-weight: 800; margin-bottom: 2px; }
+//         .metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255, 255, 255, 0.4); }
+
+//         .content-split {
+//           display: grid;
+//           grid-template-columns: 310px 1fr;
+//           gap: 32px;
+//           width: 100%;
+//           max-width: 1380px;
+//           align-items: start;
+//         }
+
+//         .grid-viewport {
+//           max-height: 660px;
+//           overflow-y: auto;
+//           width: 100%;
+//           padding: 6px 16px 20px 6px;
+//           box-sizing: border-box;
+//           scrollbar-width: none;
+//           -ms-overflow-style: none;
+//         }
+//         .grid-viewport::-webkit-scrollbar { display: none; }
+
+//         .central-grid {
+//           display: grid;
+//           grid-template-columns: repeat(3, minmax(0, 1fr));
+//           gap: 20px;
+//           width: 100%;
+//         }
+
+//         .profile-tab-bar {
+//           display: flex;
+//           background: rgba(13, 13, 18, 0.5);
+//           border: 1px solid rgba(255, 255, 255, 0.06);
+//           padding: 4px;
+//           border-radius: 10px;
+//           gap: 4px;
+//         }
+
+//         .profile-tab-btn {
+//           padding: 8px 16px;
+//           border: none;
+//           background: transparent;
+//           color: rgba(255, 255, 255, 0.5);
+//           font-weight: 600;
+//           font-size: 12px;
+//           cursor: pointer;
+//           border-radius: 7px;
+//           transition: all 0.2s ease;
+//         }
+
+//         .profile-tab-btn.active {
+//           background: #4f8cff;
+//           color: white;
+//           box-shadow: 0 4px 12px rgba(79, 140, 255, 0.25);
+//         }
+
+//         .profile-tab-btn.active.it-style {
+//           background: #a855f7;
+//           box-shadow: 0 4px 12px rgba(168, 85, 247, 0.25);
+//         }
+
+//         @media (max-width: 1280px) {
+//           .central-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+//           .grid-viewport { max-height: 880px; }
+//         }
+//         @media (max-width: 1024px) {
+//           .content-split { grid-template-columns: 1fr; gap: 32px; }
+//           .metrics-bar { grid-template-columns: repeat(2, 1fr); }
+//         }
+//         @media (max-width: 700px) {
+//           .central-grid { grid-template-columns: minmax(0, 1fr); }
+//           .grid-viewport { max-height: none; overflow: visible; padding: 0; }
+//         }
+//       `}</style>
+
+//       {/* --- PROFESSIONAL IN-APP DIALOG MODAL BOX --- */}
+//       {isEmailModalOpen && (
+//         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(5, 5, 8, 0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', boxSizing: 'border-box' }}>
+//           <form
+//             onSubmit={handleModalSubmit}
+//             style={{ background: '#0d0d12', border: '1px solid #2b2b36', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '440px', boxSizing: 'border-box', boxShadow: '0 24px 60px rgba(0,0,0,0.8), 0 0 1px 1px rgba(255,255,255,0.1) inset', display: 'flex', flexDirection: 'column', gap: '18px' }}
+//           >
+//             <div>
+//               <h4 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: 800, color: '#4f8cff', letterSpacing: '-0.4px' }}>Setup Category Channel</h4>
+//               <p style={{ margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.5' }}>
+//                 First entry logged under <strong style={{ color: '#fff' }}>"{category}"</strong>. Assign the exact application email address to lock it into system memory.
+//               </p>
+//             </div>
+
+//             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+//               <label style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.4)', fontWeight: '700', letterSpacing: '0.3px' }}>APPLICATION EMAIL ADDRESS</label>
+//               <input
+//                 type="email"
+//                 value={modalEmailInput}
+//                 onChange={(e) => setModalEmailInput(e.target.value)}
+//                 required
+//                 autoFocus
+//                 placeholder="aakash@example.com"
+//                 style={{ width: '100%', boxSizing: 'border-box', padding: '12px', background: '#14141a', border: '1px solid #3e3e4f', color: '#fff', borderRadius: '8px', fontSize: '14.5px', fontFamily: 'monospace' }}
+//               />
+//             </div>
+
+//             <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+//               <button
+//                 type="button"
+//                 onClick={() => setIsEmailModalOpen(false)}
+//                 style={{ flex: 1, padding: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+//               >
+//                 Cancel
+//               </button>
+//               <button
+//                 type="submit"
+//                 style={{ flex: 2, padding: '12px', background: '#4f8cff', border: 'none', color: '#fff', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 14px rgba(79, 140, 255, 0.3)' }}
+//               >
+//                 Confirm & Remember
+//               </button>
+//             </div>
+//           </form>
+//         </div>
+//       )}
+
+//       {showHiredMessage && (
+//         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(6, 6, 9, 0.96)', backdropFilter: 'blur(20px)', zIndex: 99999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '20px', boxSizing: 'border-box' }}>
+//           <span style={{ fontSize: '60px' }}>🥳🎉💼</span>
+//           <h1 style={{ fontSize: '36px', fontWeight: 900, color: '#10b981', margin: '15px 0' }}>HURRAY! YOU GOT THE JOB!</h1>
+//           <button onClick={() => setShowHiredMessage(false)} style={{ padding: '12px 36px', background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: 'bold', cursor: 'pointer' }}>Back to Stream</button>
+//         </div>
+//       )}
+
+//       <div className="central-dashboard">
+//         <div style={{ textAlign: 'center' }}>
+//           <h2 style={{ fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: 800, margin: '0 0 6px 0', letterSpacing: '-0.8px' }}>Job Stream Center</h2>
+//           <p style={{ margin: 0, fontSize: '14px', color: 'rgba(255,255,255,0.45)' }}>Centralized telemetry stream with persistent tracking intelligence.</p>
+//         </div>
+
+//         <div className="metrics-bar">
+//           <div className="metric-card">
+//             <div className="metric-num" style={{ color: '#4f8cff' }}>{countPending}</div>
+//             <div className="metric-label">Pending</div>
+//           </div>
+//           <div className="metric-card">
+//             <div className="metric-num" style={{ color: '#a855f7' }}>{countCallbacks}</div>
+//             <div className="metric-label">Callbacks</div>
+//           </div>
+//           <div className="metric-card">
+//             <div className="metric-num" style={{ color: '#ef4444' }}>{countRejected}</div>
+//             <div className="metric-label">Rejected</div>
+//           </div>
+//           <div className="metric-card">
+//             <div className="metric-num" style={{ color: '#10b981' }}>{countHired}</div>
+//             <div className="metric-label">Accepted / Hired</div>
+//           </div>
+//         </div>
+
+//         <div className="content-split">
+//           <div style={{ position: 'sticky', top: '24px' }}>
+//             <form onSubmit={handleSubmitClick} style={{ background: '#0d0d12', border: '1px solid #1f1f27', borderRadius: '16px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', boxSizing: 'border-box', boxShadow: '0 12px 40px rgba(0,0,0,0.5)' }}>
+//               <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: 700, color: '#4f8cff' }}>Log Work Entry</h3>
+
+//               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+//                 <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: '600' }}>COMPANY / EMPLOYER</label>
+//                 <input type="text" placeholder="e.g. YIT Construction, Clean Oy" value={company} onChange={(e) => setCompany(e.target.value)} required style={{ width: '100%', boxSizing: 'border-box', padding: '12px', background: '#14141a', border: '1px solid #2b2b36', color: '#fff', borderRadius: '8px', fontSize: '14px' }} />
+//               </div>
+
+//               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+//                 <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: '600' }}>JOB TITLE</label>
+//                 <input type="text" placeholder="e.g. Cleaner, Carpenter" value={role} onChange={(e) => setRole(e.target.value)} required style={{ width: '100%', boxSizing: 'border-box', padding: '12px', background: '#14141a', border: '1px solid #2b2b36', color: '#fff', borderRadius: '8px', fontSize: '14px' }} />
+//               </div>
+
+//               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+//                 <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: '600' }}>JOB CATEGORY</label>
+//                 <select value={category} onChange={(e) => setCategory(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '12px', background: '#14141a', border: '1px solid #2b2b36', color: '#fff', borderRadius: '8px', fontSize: '14px', cursor: 'pointer' }}>
+//                   {JOB_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+//                 </select>
+//               </div>
+
+//               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+//                 <label style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', fontWeight: '600' }}>CONTACT PERSON / PHONE</label>
+//                 <input type="text" placeholder="e.g. Pekka (Site Manager)" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} style={{ width: '100%', boxSizing: 'border-box', padding: '12px', background: '#14141a', border: '1px solid #2b2b36', color: '#fff', borderRadius: '8px', fontSize: '14px' }} />
+//               </div>
+
+//               <button type="submit" style={{ width: '100%', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', padding: '13px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px', marginTop: '6px', boxShadow: '0 4px 14px rgba(59,130,246,0.35)' }}>Save Application</button>
+//             </form>
+//           </div>
+
+//           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+
+//             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
+//               <div className="profile-tab-bar">
+//                 <button onClick={() => setActiveTab('ALL')} className={`profile-tab-btn ${activeTab === 'ALL' ? 'active' : ''}`}>
+//                   🌐 All Streams ({localJobs.length})
+//                 </button>
+//                 <button onClick={() => setActiveTab('IT')} className={`profile-tab-btn ${activeTab === 'IT' ? 'active it-style' : ''}`}>
+//                   💻 Professional IT ({itCount})
+//                 </button>
+//                 <button onClick={() => setActiveTab('LABOR')} className={`profile-tab-btn ${activeTab === 'LABOR' ? 'active' : ''}`}>
+//                   🔨 Labor Market ({laborCount})
+//                 </button>
+//               </div>
+
+//               <button
+//                 onClick={() => setSortOrder(prev => prev === 'NEWEST' ? 'OLDEST' : 'NEWEST')}
+//                 style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '6px', padding: '6px 12px', color: '#4f8cff', fontSize: '11px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+//               >
+//                 📅 Sort: {sortOrder === 'NEWEST' ? 'Newest Applied' : 'Oldest Applied'}
+//               </button>
+//             </div>
+
+//             <div className="grid-viewport">
+//               <div className="central-grid">
+//                 {categorizedJobs.length === 0 ? (
+//                   <div style={{ width: '100%', gridColumn: '1 / -1', textAlign: 'center', padding: '60px 20px', color: 'rgba(255,255,255,0.25)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '16px', background: 'rgba(13,13,18,0.2)', boxSizing: 'border-box' }}>
+//                     No applications found in this target profile. Adjust selection filters or submit entries.
+//                   </div>
+//                 ) : (
+//                   categorizedJobs.map(job => (
+//                     <GlassJobCard key={job.id} job={job} onUpdateStatus={updateStatus} onDelete={deleteJob} />
+//                   ))
+//                 )}
+//               </div>
+//             </div>
+//           </div>
+
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default JobsPage;
 import React, { useState, useEffect, useMemo } from 'react';
+import { jsPDF } from 'jspdf';
 
 interface JobItem {
   id: string;
@@ -37,11 +632,51 @@ const STATUS_CONFIG: Record<string, { text: string; color: string; bgGlow: strin
   'Rejected_Interview': { text: '✕ Interviewed & Rejected', color: '#f97316', bgGlow: 'rgba(249, 115, 22, 0.04)', border: 'rgba(249, 115, 22, 0.2)' },
 };
 
+// Default Templates with tags/placeholders
+const DEFAULT_IT_TEMPLATE = `[Date]
+
+[HiringManager]
+[Company]
+
+Subject: Application for [Role] position
+
+Dear [HiringManager],
+
+I am writing to express my strong interest in the [Role] position at [Company]. With my solid background in software development and technical problem-solving, I am confident in my ability to bring exceptional value to your engineering team.
+
+My technical toolkit fits perfectly with modern development environments, allowing me to craft clean, performant user interfaces and construct reliable systems. Throughout my portfolio projects, I have prioritized high-quality code delivery, seamless system integrations, and stellar user experiences.
+
+I welcome the opportunity to discuss how my skill set aligns with your ongoing software endeavors. Thank you for your time and consideration.
+
+Sincerely,
+Aakash Basnet
+aakashbasnet.info@gmail.com`;
+
+const DEFAULT_LABOR_TEMPLATE = `[Date]
+
+[HiringManager]
+[Company]
+
+Subject: Application for [Role] position
+
+Dear [HiringManager],
+
+I am writing to apply for the [Role] position currently open at [Company]. I possess a strong work ethic, high physical endurance, and a proven track record of reliable team collaboration in fast-paced operational settings.
+
+Whether executing rigorous duties on-site, managing warehouse workflows, or maintaining safety standards, I approach every task with a diligent and proactive attitude. I take pride in being highly punctual, versatile, and quick to learn new procedures.
+
+I am eager to bring my practical, hands-on capabilities to your team. Thank you for considering my application, and I look forward to the prospect of working together.
+
+Sincerely,
+Aakash Basnet
+aakash.basnet74855@gmail.com`;
+
 const GlassJobCard: React.FC<{
   job: JobItem;
   onUpdateStatus: (id: string, status: 'Next Phase' | 'Rejected' | 'Hired') => void;
   onDelete: (id: string) => void;
-}> = ({ job, onUpdateStatus, onDelete }) => {
+  onGenerateCoverLetter: (job: JobItem) => void;
+}> = ({ job, onUpdateStatus, onDelete, onGenerateCoverLetter }) => {
   const [isHovered, setIsHovered] = useState(false);
 
   const configKey = job.status === 'Rejected'
@@ -135,7 +770,7 @@ const GlassJobCard: React.FC<{
           </span>
         </div>
 
-        <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center' }}>
+        <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{
             fontSize: '11.5px',
             color: isIT ? '#b388ff' : '#82b1ff',
@@ -150,6 +785,35 @@ const GlassJobCard: React.FC<{
           }}>
             📧 <span style={{ fontFamily: 'monospace' }}>{renderedEmail}</span>
           </span>
+
+          <button
+            onClick={() => onGenerateCoverLetter(job)}
+            title="Generate & Edit Cover Letter"
+            style={{
+              padding: '4px 8px',
+              borderRadius: '6px',
+              fontSize: '11.5px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              color: '#fff',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(79, 140, 255, 0.15)';
+              e.currentTarget.style.borderColor = '#4f8cff';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            }}
+          >
+            📝 Letter
+          </button>
         </div>
 
         {job.contactPerson && (
@@ -195,9 +859,26 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
   const [sortOrder, setSortOrder] = useState<'NEWEST' | 'OLDEST'>('NEWEST');
   const [activeTab, setActiveTab] = useState<'ALL' | 'IT' | 'LABOR'>('ALL');
 
-  // Custom Dialog Modal Form States
+  // Channel & Entry modals
   const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [modalEmailInput, setModalEmailInput] = useState('');
+
+  // Template Management Modals
+  const [isTemplateEditorOpen, setIsTemplateEditorOpen] = useState(false);
+  const [isLetterGeneratorOpen, setIsLetterGeneratorOpen] = useState(false);
+
+  // States to persist master template definitions
+  const [itTemplate, setItTemplate] = useState<string>(() => {
+    return localStorage.getItem('cv_template_it') || DEFAULT_IT_TEMPLATE;
+  });
+  const [laborTemplate, setLaborTemplate] = useState<string>(() => {
+    return localStorage.getItem('cv_template_labor') || DEFAULT_LABOR_TEMPLATE;
+  });
+
+  // States for letter generation compilation
+  const [activeJobForLetter, setActiveJobForLetter] = useState<JobItem | null>(null);
+  const [currentHiringManager, setCurrentHiringManager] = useState('Hiring Manager');
+  const [editableLetterDraft, setEditableLetterDraft] = useState('');
 
   const [rememberedEmails, setRememberedEmails] = useState<Record<string, string>>(() => {
     const savedMapping = localStorage.getItem('remembered_category_emails');
@@ -210,6 +891,7 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
     return jobs.length > 0 ? jobs : [];
   });
 
+  // Track and synchronize storage state
   useEffect(() => {
     const saved = localStorage.getItem('tracked_jobs');
     if (!saved && jobs.length > 0 && localJobs.length === 0) {
@@ -225,7 +907,14 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
     localStorage.setItem('remembered_category_emails', JSON.stringify(rememberedEmails));
   }, [rememberedEmails]);
 
-  // Main intercepting submission flow
+  useEffect(() => {
+    localStorage.setItem('cv_template_it', itTemplate);
+  }, [itTemplate]);
+
+  useEffect(() => {
+    localStorage.setItem('cv_template_labor', laborTemplate);
+  }, [laborTemplate]);
+
   const handleSubmitClick = (e: React.FormEvent) => {
     e.preventDefault();
     if (!company.trim() || !role.trim()) return;
@@ -233,10 +922,8 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
     const previouslySavedEmail = rememberedEmails[category];
 
     if (previouslySavedEmail) {
-      // Setup direct submission bypassing dialogue box entirely
       executeJobSave(previouslySavedEmail);
     } else {
-      // Trigger dynamic custom dialogue UI layout frame
       const standardSuggestion = category === "IT / Software Engineering"
         ? "aakashbasnet.info@gmail.com"
         : "aakash.basnet74855@gmail.com";
@@ -246,7 +933,6 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
     }
   };
 
-  // Execution algorithm to package parameters safely into local tracking state
   const executeJobSave = (emailToAttach: string) => {
     const currentTimestamp = new Date().toLocaleString('en-GB', {
       day: '2-digit', month: '2-digit', year: 'numeric',
@@ -275,7 +961,6 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
     onAddJob(newJob.company, newJob.role);
     setLocalJobs(prev => [newJob, ...prev]);
 
-    // Cleanup input nodes cleanly
     setCompany('');
     setRole('');
     setContactPerson('');
@@ -286,7 +971,6 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
     const targetedEmail = modalEmailInput.trim();
     if (!targetedEmail) return;
 
-    // Save configuration inside system context permanently
     setRememberedEmails(prev => ({
       ...prev,
       [category]: targetedEmail
@@ -319,6 +1003,82 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
     if (onDeleteJob) {
       onDeleteJob(jobId);
     }
+  };
+
+  // Helper template engine placeholder merge function
+  const compileLetterTemplate = (templateBody: string, job: JobItem, manager: string) => {
+    let cleanDate = new Date().toLocaleDateString('en-GB', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    });
+    if (job.date_applied) {
+      const parts = job.date_applied.split(',');
+      if (parts[0]) {
+        const [day, month, year] = parts[0].trim().split('/').map(Number);
+        if (day && month && year) {
+          cleanDate = new Date(year, month - 1, day).toLocaleDateString('en-GB', {
+            day: 'numeric', month: 'long', year: 'numeric'
+          });
+        }
+      }
+    }
+
+    return templateBody
+      .replace(/\[Company\]/g, job.company)
+      .replace(/\[Role\]/g, job.role)
+      .replace(/\[Date\]/g, cleanDate)
+      .replace(/\[HiringManager\]/g, manager || "Hiring Manager");
+  };
+
+  const triggerLetterGenerator = (job: JobItem) => {
+    setActiveJobForLetter(job);
+    const initialManager = job.contactPerson ? job.contactPerson.split('(')[0].trim() : 'Hiring Manager';
+    setCurrentHiringManager(initialManager);
+
+    // Pick active template based on application category
+    const activeTemplate = job.category === "IT / Software Engineering" ? itTemplate : laborTemplate;
+    const initialDraft = compileLetterTemplate(activeTemplate, job, initialManager);
+    setEditableLetterDraft(initialDraft);
+    setIsLetterGeneratorOpen(true);
+  };
+
+  const handleManagerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const targetName = e.target.value;
+    setCurrentHiringManager(targetName);
+    if (activeJobForLetter) {
+      const activeTemplate = activeJobForLetter.category === "IT / Software Engineering" ? itTemplate : laborTemplate;
+      setEditableLetterDraft(compileLetterTemplate(activeTemplate, activeJobForLetter, targetName));
+    }
+  };
+
+  const handleDownloadPDF = () => {
+    if (!activeJobForLetter) return;
+    const doc = new jsPDF();
+
+    // Professional standard typography margins setup (A4 standard: 210 x 297 mm)
+    doc.setFont("Helvetica", "normal");
+    doc.setFontSize(11);
+
+    const pageMarginLeft = 20;
+    const pageWidthLimit = 170; // 210 - 20 (left) - 20 (right)
+    let dynamicCursorY = 25;
+
+    // Word Wrap long letter text bodies safely
+    const splitTextBodyLines = doc.splitTextToSize(editableLetterDraft, pageWidthLimit);
+
+    splitTextBodyLines.forEach((singleLine: string) => {
+      // Check page height limit, add new pages dynamically if overflowing
+      if (dynamicCursorY > 275) {
+        doc.addPage();
+        dynamicCursorY = 25;
+      }
+      doc.text(singleLine, pageMarginLeft, dynamicCursorY);
+      dynamicCursorY += 6.5; // Line-height height scaling step
+    });
+
+    // Formulate dynamic file name based on logged parameters
+    const sanitizedCompanyName = activeJobForLetter.company.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    doc.save(`${sanitizedCompanyName}_cover_letter.pdf`);
+    setIsLetterGeneratorOpen(false);
   };
 
   const parseDate = (dateStr: string) => {
@@ -438,7 +1198,125 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
         }
       `}</style>
 
-      {/* --- PROFESSIONAL IN-APP DIALOG MODAL BOX --- */}
+      {/* --- MASTER TEMPLATES CONFIGURATION PANEL MODAL --- */}
+      {isTemplateEditorOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(5, 5, 8, 0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', zIndex: 10005, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', boxSizing: 'border-box' }}>
+          <div style={{ background: '#0d0d12', border: '1px solid #2b2b36', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '800px', boxSizing: 'border-box', boxShadow: '0 24px 60px rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: 800, color: '#4f8cff' }}>Global Master Letter Templates</h4>
+                <p style={{ margin: 0, fontSize: '12.5px', color: 'rgba(255,255,255,0.45)', lineHeight: '1.5' }}>
+                  Write standard template layouts here. Use keys <code style={{ color: '#a855f7' }}>[Date]</code>, <code style={{ color: '#a855f7' }}>[Company]</code>, <code style={{ color: '#a855f7' }}>[Role]</code>, and <code style={{ color: '#a855f7' }}>[HiringManager]</code> to insert properties automatically.
+                </p>
+              </div>
+              <button onClick={() => setIsTemplateEditorOpen(false)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '18px', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              {/* IT Template Module */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#a855f7' }}>💻 TECHNICAL IT TEMPLATE</span>
+                <textarea
+                  value={itTemplate}
+                  onChange={(e) => setItTemplate(e.target.value)}
+                  style={{ width: '100%', height: '320px', background: '#14141a', border: '1px solid #2b2b36', borderRadius: '8px', padding: '12px', color: '#fff', fontFamily: 'monospace', fontSize: '12px', resize: 'none', boxSizing: 'border-box', lineHeight: '1.4' }}
+                />
+              </div>
+
+              {/* Labor Template Module */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#4f8cff' }}>🔨 LABOR MARKET TEMPLATE</span>
+                <textarea
+                  value={laborTemplate}
+                  onChange={(e) => setLaborTemplate(e.target.value)}
+                  style={{ width: '100%', height: '320px', background: '#14141a', border: '1px solid #2b2b36', borderRadius: '8px', padding: '12px', color: '#fff', fontFamily: 'monospace', fontSize: '12px', resize: 'none', boxSizing: 'border-box', lineHeight: '1.4' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                onClick={() => {
+                  if (window.confirm("Restore both templates back to software factory defaults?")) {
+                    setItTemplate(DEFAULT_IT_TEMPLATE);
+                    setLaborTemplate(DEFAULT_LABOR_TEMPLATE);
+                  }
+                }}
+                style={{ padding: '10px 16px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)', borderRadius: '8px', fontSize: '12px', cursor: 'pointer' }}
+              >
+                Reset Default Templates
+              </button>
+              <button
+                onClick={() => setIsTemplateEditorOpen(false)}
+                style={{ padding: '10px 24px', background: '#4f8cff', border: 'none', color: '#fff', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 4px 14px rgba(79, 140, 255, 0.3)' }}
+              >
+                Save Templates Config
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- LIVE COVER LETTER COMPILER & PDF DOWNLOAD MODAL --- */}
+      {isLetterGeneratorOpen && activeJobForLetter && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(5, 5, 8, 0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', boxSizing: 'border-box' }}>
+          <div style={{ background: '#0d0d12', border: '1px solid #2b2b36', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '640px', boxSizing: 'border-box', boxShadow: '0 24px 60px rgba(0,0,0,0.8)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <h4 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: 800, color: '#4f8cff' }}>
+                Build Cover Letter: {activeJobForLetter.company}
+              </h4>
+              <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255,255,255,0.45)' }}>
+                Review and finalize your cover letter below. Edits made here only apply to this download.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>COMPANY / ROLE</span>
+                <span style={{ fontSize: '12.5px', color: '#fff', background: '#14141a', padding: '8px', borderRadius: '6px', border: '1px solid #1f1f27' }}>
+                  {activeJobForLetter.company} — {activeJobForLetter.role}
+                </span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>HIRING MANAGER / RECIPIENT</label>
+                <input
+                  type="text"
+                  value={currentHiringManager}
+                  onChange={handleManagerNameChange}
+                  placeholder="e.g. Hiring Manager, John Doe"
+                  style={{ background: '#14141a', border: '1px solid #2b2b36', borderRadius: '6px', padding: '8px', color: '#fff', fontSize: '12.5px', width: '100%', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>EDIT LETTER BODY</span>
+              <textarea
+                value={editableLetterDraft}
+                onChange={(e) => setEditableLetterDraft(e.target.value)}
+                style={{ width: '100%', height: '300px', background: '#14141a', border: '1px solid #2b2b36', borderRadius: '8px', padding: '16px', color: '#fff', fontFamily: 'monospace', fontSize: '13px', lineHeight: '1.5', resize: 'vertical', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
+              <button
+                onClick={() => setIsLetterGeneratorOpen(false)}
+                style={{ flex: 1, padding: '12px', background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+              >
+                Close Editor
+              </button>
+              <button
+                onClick={handleDownloadPDF}
+                style={{ flex: 2, padding: '12px', background: '#10b981', border: 'none', color: '#fff', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)' }}
+              >
+                📥 Save & Download PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- CHANNEL CREATION DIALOG --- */}
       {isEmailModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(5, 5, 8, 0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', boxSizing: 'border-box' }}>
           <form
@@ -493,9 +1371,35 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
       )}
 
       <div className="central-dashboard">
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', position: 'relative', width: '100%' }}>
           <h2 style={{ fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: 800, margin: '0 0 6px 0', letterSpacing: '-0.8px' }}>Job Stream Center</h2>
-          <p style={{ margin: 0, fontSize: '14px', color: 'rgba(255,255,255,0.45)' }}>Centralized telemetry stream with persistent tracking intelligence.</p>
+          <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: 'rgba(255,255,255,0.45)' }}>Centralized telemetry stream with persistent tracking intelligence.</p>
+
+          <button
+            onClick={() => setIsTemplateEditorOpen(true)}
+            style={{
+              background: 'rgba(168, 85, 247, 0.12)',
+              border: '1px solid rgba(168, 85, 247, 0.35)',
+              borderRadius: '8px',
+              padding: '8px 16px',
+              color: '#d8b4fe',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(168, 85, 247, 0.25)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(168, 85, 247, 0.12)';
+            }}
+          >
+            ⚙️ Edit Master Templates
+          </button>
         </div>
 
         <div className="metrics-bar">
@@ -579,7 +1483,13 @@ const JobsPage: React.FC<JobsPageProps> = ({ jobs = [], onAddJob, onDeleteJob })
                   </div>
                 ) : (
                   categorizedJobs.map(job => (
-                    <GlassJobCard key={job.id} job={job} onUpdateStatus={updateStatus} onDelete={deleteJob} />
+                    <GlassJobCard
+                      key={job.id}
+                      job={job}
+                      onUpdateStatus={updateStatus}
+                      onDelete={deleteJob}
+                      onGenerateCoverLetter={triggerLetterGenerator}
+                    />
                   ))
                 )}
               </div>
