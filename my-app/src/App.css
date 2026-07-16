@@ -193,3 +193,95 @@ body {
 .btn-secondary:hover {
   background: #14141a;
 }
+/* App.css Extensions */
+
+/* Skill Matrix Grid Styling */
+.skills-table-container {
+  background: var(--panel-blue);
+  border: 1px solid var(--border-blue);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--custom-elevation-shadow);
+}
+
+.skills-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.skills-table th {
+  background: #0f172a;
+  padding: 16px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+  border-bottom: 2px solid var(--border-blue);
+}
+
+.skills-table td {
+  padding: 18px 16px;
+  border-bottom: 1px solid var(--border-blue);
+  font-size: 14px;
+}
+
+.badge-tag {
+  display: inline-block;
+  background: rgba(79, 140, 255, 0.1);
+  color: var(--primary);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-right: 6px;
+  margin-bottom: 6px;
+  border: 1px solid rgba(79, 140, 255, 0.2);
+}
+
+.badge-tag.learning {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+/* Slide-over Canvas (Interactive CV) */
+.slide-over-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  z-index: 3000;
+  display: flex;
+  justify-content: flex-end; /* Slide-over aligns to the right side */
+  animation: fadeIn 0.3s ease-out;
+}
+
+.slide-over-panel {
+  width: 100%;
+  max-width: 650px;
+  height: 100%;
+  background: var(--panel);
+  border-left: 2px solid var(--border-blue);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  padding: 40px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transform: translateX(0);
+  animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
