@@ -357,26 +357,7 @@ h1, h2, h3, .font-cosmic-display {
   background: #1e1b4b;
 }
 
-@layer components {
-  /* The ultimate, elegant cosmic glass container */
-  .cosmic-glass {
-    @apply bg-black/40
-           backdrop-blur-lg
-           border border-white/10
-           rounded-2xl
-           shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]
-           transition-all duration-300;
-  }
 
-  /* Interactive version (for cards you want people to click/hover on) */
-  .cosmic-glass-interactive {
-    @apply cosmic-glass
-           hover:bg-black/50
-           hover:border-white/20
-           hover:-translate-y-1
-           hover:shadow-[0_12px_40px_0_rgba(139,92,246,0.15)]; /* subtle violet glow on hover */
-  }
-}
 
 @layer utilities {
   /* Subtle glow to make headings pop off the cosmic background */
