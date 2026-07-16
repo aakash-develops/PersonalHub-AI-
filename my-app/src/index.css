@@ -1,18 +1,392 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 :root {
-  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --bg: #0b0b0f;
-  --panel: #14141a;
-  --border: #22222a;
-  --primary: #4f8cff;
-  --primary-glow: rgba(79, 140, 255, 0.15);
-  --radius: 12px;
+  /* Fonts */
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+
+  /* 🌌 Deep Space Obsidian Palette */
+  --bg-space-black: #000000;    /* Absolute black for supreme contrast */
+  --bg-offset: #050508;         /* Subtle dark canvas depth */
+  --panel-glass: rgba(13, 13, 18, 0.7); /* Deep cosmic panel backing */
+
+  /* ⚡ Neon Cosmic Glowing Accents */
+  --border-cosmic: rgba(255, 255, 255, 0.08);
+  --border-cosmic-active: rgba(139, 92, 246, 0.4); /* Glow purple */
+  --border-blue: #223152;       /* Sleek structural steel blue */
+
+  --primary: #4f8cff;           /* Electric comet blue */
+  --primary-glow: rgba(79, 140, 255, 0.25);
+  --radius-standard: 12px;
+  --radius-lg: 16px;
+
+  /* ⏱️ Spring-Elastic Animation Curves */
+  --ease-elastic: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-cosmic: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* High-Elevation Deep Shadow Combo */
+  --custom-elevation-shadow: rgba(0, 0, 0, 0.8) 0px 19px 38px, rgba(0, 0, 0, 0.6) 0px 15px 12px;
 }
 
+/* ==========================================================================
+   🪐 MASTER LAYOUT & APP RESET
+   ========================================================================== */
+
 body {
-  font-family: var(--font-sans);
-  background-color: var(--bg);
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-space-black) !important;
   color: #ffffff;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, .font-cosmic-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  background-color: transparent;
+}
+
+/* Centralized Grid Alignment */
+.dashboard-container {
+  flex: 1;
+  max-width: 1000px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 36px;
+}
+
+/* ==========================================================================
+   🛸 METRICS & SPRING-PANELS
+   ========================================================================== */
+
+.progress-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 24px;
+  width: 100%;
+  max-width: 850px;
+  margin: 0 auto;
+}
+
+/* Upgraded to Cosmic Panel Spec */
+.progress-panel {
+  background: var(--panel-glass) !important;
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 2px solid var(--border-blue) !important;
+  border-radius: var(--radius-standard) !important;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  box-shadow: var(--custom-elevation-shadow);
+  transition: transform 0.25s var(--ease-elastic),
+              border-color 0.2s ease,
+              box-shadow 0.2s ease;
+}
+
+.progress-panel:hover {
+  transform: translateY(-4px) scale(1.02);
+  border-color: var(--primary) !important;
+  box-shadow: var(--custom-elevation-shadow), var(--primary-glow) 0px 0px 25px;
+}
+
+.tracker-section-wrapper {
+  width: 100%;
+  max-width: 850px;
+}
+
+/* ==========================================================================
+   👾 INTERACTIVE MODALS & SIDE-PANELS
+   ========================================================================== */
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+  background: var(--bg-offset);
+  border: 2px solid var(--border-blue);
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  width: 100%;
+  max-width: 450px;
+  box-shadow: var(--custom-elevation-shadow);
+}
+
+/* Slide-over Canvas (Interactive CV) */
+.slide-over-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  z-index: 3000;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.slide-over-panel {
+  width: 100%;
+  max-width: 650px;
+  height: 100%;
+  background: var(--bg-offset);
+  border-left: 2px solid var(--border-blue);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.8);
+  padding: 40px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transform: translateX(0);
+  animation: slideIn 0.35s var(--ease-cosmic);
+}
+
+/* ==========================================================================
+   📝 TABLES, BADGES, & FORMS
+   ========================================================================== */
+
+.skills-table-container {
+  background: rgba(11, 17, 30, 0.5);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-blue);
+  border-radius: var(--radius-standard);
+  overflow: hidden;
+  box-shadow: var(--custom-elevation-shadow);
+}
+
+.skills-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.skills-table th {
+  background: #090d16;
+  padding: 16px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+  border-bottom: 2px solid var(--border-blue);
+}
+
+.skills-table td {
+  padding: 18px 16px;
+  border-bottom: 1px solid var(--border-blue);
+  font-size: 14px;
+}
+
+.badge-tag {
+  display: inline-block;
+  background: rgba(79, 140, 255, 0.1);
+  color: var(--primary);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-right: 6px;
+  margin-bottom: 6px;
+  border: 1px solid rgba(79, 140, 255, 0.2);
+}
+
+.badge-tag.learning {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.5px;
+  font-weight: 600;
+}
+
+.form-input {
+  background: #0a0a0f;
+  border: 1px solid #1f1f2e;
+  border-radius: 8px;
+  padding: 12px;
+  color: #ffffff;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 10px rgba(79, 140, 255, 0.2);
+}
+
+/* Upgraded Cosmic Buttons */
+.btn-primary {
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-elastic), background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #3a7aff;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #8e8e9c;
+  border: 1px solid #262632;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #0d0d12;
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   ✨ HIGH-PERFORMANCE SYSTEM ANIMATIONS
+   ========================================================================== */
+
+.page-fade-in {
+  animation: pageEnter 0.45s var(--ease-cosmic) both;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+/* Background Planet Orbits */
+@keyframes orbit-clockwise {
+  from { transform: rotate(0deg) translateX(100px) rotate(0deg); }
+  to { transform: rotate(360deg) translateX(100px) rotate(-360deg); }
+}
+
+@keyframes orbit-counter {
+  from { transform: rotate(360deg) translateX(140px) rotate(-360deg); }
+  to { transform: rotate(0deg) translateX(140px) rotate(0deg); }
+}
+
+.planet-orbit-1 {
+  animation: orbit-clockwise 40s linear infinite;
+}
+
+.planet-orbit-2 {
+  animation: orbit-counter 60s linear infinite;
+}
+
+/* Sleek Cosmic Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-space-black);
+}
+::-webkit-scrollbar-thumb {
+  background: #12101e;
+  border-radius: 9999px;
+  border: 2px solid var(--bg-space-black);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #1e1b4b;
+}
+
+@layer components {
+  /* The ultimate, elegant cosmic glass container */
+  .cosmic-glass {
+    @apply bg-black/40
+           backdrop-blur-lg
+           border border-white/10
+           rounded-2xl
+           shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]
+           transition-all duration-300;
+  }
+
+  /* Interactive version (for cards you want people to click/hover on) */
+  .cosmic-glass-interactive {
+    @apply cosmic-glass
+           hover:bg-black/50
+           hover:border-white/20
+           hover:-translate-y-1
+           hover:shadow-[0_12px_40px_0_rgba(139,92,246,0.15)]; /* subtle violet glow on hover */
+  }
+}
+
+@layer utilities {
+  /* Subtle glow to make headings pop off the cosmic background */
+  .cosmic-glow-text {
+    text-shadow: 0 0 20px rgba(34, 211, 238, 0.35), 0 0 40px rgba(244, 114, 182, 0.2);
+  }
+
+  /* Frosted diffusion with NO borders or solid background boxes */
+  .frosted-glass-flat {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
 }

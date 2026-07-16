@@ -1,7 +1,7 @@
 // src/pages/ProjectsPage.tsx
 import React, { useState } from "react";
 import DashboardGrid from "../components/common/DashboardGrid";
-import "../App.css";
+
 
 interface ProjectItem {
   id: string;
