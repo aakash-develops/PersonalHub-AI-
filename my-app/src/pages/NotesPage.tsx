@@ -1,4 +1,3 @@
-// src/pages/NotesPage.tsx
 import React, { useState } from 'react';
 
 interface NoteItem {
@@ -7,20 +6,18 @@ interface NoteItem {
   title?: string;
   heading?: string;
   sourceUrl?: string;
-  note: string; // The core text field serialized to match App.tsx
+  note: string;
   date: string;
   tag?: string;
 }
 
-// Unified payload type for serialization
 interface StructuredNoteContent {
   type: 'note' | 'course';
   title: string;
-  heading: string; // Used as Platform/Provider for courses (e.g. Coursera, Udemy)
+  heading: string;
   sourceUrl: string;
   tag: string;
-  note: string; // Serves as Core Notes for a note, or Progress Update for a course
-  // Explicit Course Tracking fields:
+  note: string;
   isPaid?: boolean;
   progressPercent?: number;
   currentMilestone?: string;
@@ -70,24 +67,24 @@ const PRE_COLLECTED_MATERIALS: NoteItem[] = [
 ];
 
 const NotesPage: React.FC<NotesPageProps> = ({ notes, onAddNote }) => {
-  // Intake Type Mode
   const [entryType, setEntryType] = useState<'note' | 'course'>('note');
 
-  // Input tracking states
+  // Input States
   const [title, setTitle] = useState('');
   const [heading, setHeading] = useState('');
   const [sourceUrl, setSourceUrl] = useState('');
   const [tag, setTag] = useState('Theory');
   const [noteContent, setNoteContent] = useState('');
 
-  // Specific Course tracking states
+  // Course Specific States
   const [isPaid, setIsPaid] = useState(false);
   const [progressPercent, setProgressPercent] = useState(0);
   const [currentMilestone, setCurrentMilestone] = useState('');
 
-  // Filtering states
+  // Filters
   const [filterTag, setFilterTag] = useState('All');
   const [filterType, setFilterType] = useState<'All' | 'note' | 'course'>('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -109,7 +106,6 @@ const NotesPage: React.FC<NotesPageProps> = ({ notes, onAddNote }) => {
 
     onAddNote(JSON.stringify(structuredPayload));
 
-    // Clear inputs safely
     setTitle('');
     setHeading('');
     setSourceUrl('');
@@ -119,7 +115,6 @@ const NotesPage: React.FC<NotesPageProps> = ({ notes, onAddNote }) => {
     setCurrentMilestone('');
   };
 
-  // Safe structural extraction parsing engine
   const parseNoteData = (rawItem: NoteItem) => {
     try {
       const parsed = JSON.parse(rawItem.note) as StructuredNoteContent;
@@ -137,7 +132,6 @@ const NotesPage: React.FC<NotesPageProps> = ({ notes, onAddNote }) => {
         currentMilestone: parsed.currentMilestone || ""
       };
     } catch {
-      // Graceful native fallback legacy normalization
       return {
         id: rawItem.id,
         date: rawItem.date,
@@ -157,56 +151,72 @@ const NotesPage: React.FC<NotesPageProps> = ({ notes, onAddNote }) => {
   const parsedUserNotes = notes.map(parseNoteData);
   const displayNotes = parsedUserNotes.length === 0 ? PRE_COLLECTED_MATERIALS.map(parseNoteData) : parsedUserNotes;
 
-  // Master data filtering array combination
   const filteredNotes = displayNotes.filter(n => {
     const matchTag = filterTag === 'All' || n.tag === filterTag;
     const matchType = filterType === 'All' || n.type === filterType;
-    return matchTag && matchType;
+    const matchSearch = n.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        n.note.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        n.heading.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchTag && matchType && matchSearch;
   });
 
   return (
-    <div style={{ maxWidth: '1050px', margin: '0 auto', padding: '40px 24px', color: '#fff', fontFamily: 'system-ui, sans-serif' }}>
+    <div className="max-w-6xl mx-auto px-6 py-10 text-dynamic-primary font-sans min-h-screen">
 
       {/* HEADER SECTION */}
-      <div style={{ marginBottom: '36px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '16px' }}>
+      <div className="mb-9 flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-dynamic pb-6">
         <div>
-          <h2 style={{ fontSize: '28px', fontWeight: 900, margin: '0 0 6px 0', letterSpacing: '-0.8px' }}>
+          <h2 className="text-3xl font-extrabold tracking-tight mb-2">
             Technical Learning Hub
           </h2>
-          <p style={{ margin: 0, fontSize: '14.5px', color: 'rgba(255,255,255,0.4)' }}>
-            Document core taxonomy blocks, whitepaper breakthroughs, and operational course milestones.
-          </p>
+
         </div>
 
-        {/* COMBINED SEGMENT FILTERS */}
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        {/* SEARCH AND COMBINED SEGMENT FILTERS */}
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <input
+            type="text"
+            placeholder="Search indexing matrix..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-3 py-1.5 rounded-lg border border-dynamic text-xs font-mono bg-[var(--pill-bg)] focus:outline-none focus:border-[var(--accent-color)] sm:w-48"
+          />
+
           {/* Type Filter */}
-          <div style={{ display: 'flex', background: '#0d0d12', padding: '4px', borderRadius: '8px', border: '1px solid #16161c' }}>
+          <div className="flex bg-[var(--pill-bg)] p-1 rounded-lg border border-dynamic">
             {[
-              { key: 'All', label: '📚 Everything' },
+              { key: 'All', label: '📚 All' },
               { key: 'note', label: '📝 Research' },
               { key: 'course', label: '🎓 Courses' }
             ].map((t) => (
-              <button key={t.key} type="button" onClick={() => setFilterType(t.key as any)}
-                style={{
-                  padding: '6px 12px', borderRadius: '6px', fontSize: '12.5px', fontWeight: 600, border: 'none', cursor: 'pointer',
-                  background: filterType === t.key ? '#334155' : 'transparent', color: filterType === t.key ? '#fff' : 'rgba(255,255,255,0.45)',
-                  transition: 'all 0.15s ease'
-                }}>
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setFilterType(t.key as any)}
+                className={`px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-150 ${
+                  filterType === t.key
+                    ? 'bg-slate-700 text-white shadow-sm'
+                    : 'text-dynamic-secondary hover:text-dynamic-primary'
+                }`}
+              >
                 {t.label}
               </button>
             ))}
           </div>
 
           {/* Tag Taxonomy Filter */}
-          <div style={{ display: 'flex', background: '#0d0d12', padding: '4px', borderRadius: '8px', border: '1px solid #16161c' }}>
+          <div className="flex bg-[var(--pill-bg)] p-1 rounded-lg border border-dynamic">
             {['All', 'Theory', 'Implementation', 'Systems', 'Databases'].map((t) => (
-              <button key={t} type="button" onClick={() => setFilterTag(t)}
-                style={{
-                  padding: '6px 14px', borderRadius: '6px', fontSize: '12.5px', fontWeight: 600, border: 'none', cursor: 'pointer',
-                  background: filterTag === t ? '#4f8cff' : 'transparent', color: filterTag === t ? '#fff' : 'rgba(255,255,255,0.45)',
-                  transition: 'all 0.15s ease'
-                }}>
+              <button
+                key={t}
+                type="button"
+                onClick={() => setFilterTag(t)}
+                className={`px-3 py-1 rounded-md text-xs font-semibold uppercase tracking-wider transition-all duration-150 ${
+                  filterTag === t
+                    ? 'bg-[var(--accent-color)] text-white shadow-sm'
+                    : 'text-dynamic-secondary hover:text-dynamic-primary'
+                }`}
+              >
                 {t}
               </button>
             ))}
@@ -215,41 +225,71 @@ const NotesPage: React.FC<NotesPageProps> = ({ notes, onAddNote }) => {
       </div>
 
       {/* CORE WRAPPER GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: '360px 1fr', gap: '32px', alignItems: 'start' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-8 items-start">
 
-        {/* SIDEBAR: INJECT NEW MATERIALS FORM */}
-        <form onSubmit={handleSubmit} style={{ background: '#0d0d12', border: '1px solid #16161c', borderRadius: '14px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', position: 'sticky', top: '20px' }}>
+        {/* SIDEBAR FORM CONTAINER */}
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-2xl border p-6 flex flex-col gap-4 sticky top-24 backdrop-blur-xl transition-all duration-500"
+          style={{ backgroundColor: 'var(--bg-glass)', borderColor: 'var(--border-glass)', boxShadow: 'var(--shadow-premium)' }}
+        >
+          <div className="flex justify-between items-center border-b border-dynamic pb-3">
+            <h3 className="font-bold text-sm tracking-wider uppercase">➕ Index Entry</h3>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #16161c', paddingBottom: '12px' }}>
-            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 800 }}>➕ Index Entry</h3>
             {/* INTAKE MODE SELECTOR SWITCH */}
-            <div style={{ display: 'flex', background: '#14141a', padding: '2px', borderRadius: '6px', border: '1px solid #222' }}>
-              <button type="button" onClick={() => setEntryType('note')} style={{ border: 'none', padding: '4px 8px', fontSize: '11px', fontWeight: 700, borderRadius: '4px', cursor: 'pointer', background: entryType === 'note' ? '#4f8cff' : 'transparent', color: '#fff' }}>Note</button>
-              <button type="button" onClick={() => setEntryType('course')} style={{ border: 'none', padding: '4px 8px', fontSize: '11px', fontWeight: 700, borderRadius: '4px', cursor: 'pointer', background: entryType === 'course' ? '#10b981' : 'transparent', color: '#fff' }}>Course</button>
+            <div className="flex bg-black/20 p-0.5 rounded-md border border-dynamic">
+              <button
+                type="button"
+                onClick={() => setEntryType('note')}
+                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-colors ${entryType === 'note' ? 'bg-[var(--accent-color)] text-white' : 'text-dynamic-secondary'}`}
+              >
+                Note
+              </button>
+              <button
+                type="button"
+                onClick={() => setEntryType('course')}
+                className={`px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-colors ${entryType === 'course' ? 'bg-emerald-600 text-white' : 'text-dynamic-secondary'}`}
+              >
+                Course
+              </button>
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold tracking-widest text-dynamic-secondary uppercase">
               {entryType === 'course' ? 'Course Title / Certification' : 'Document Title'}
             </label>
-            <input type="text" placeholder={entryType === 'course' ? "e.g. Deep Learning Specialization" : "e.g. Attention Is All You Need Paper"} value={title} onChange={(e) => setTitle(e.target.value)} required
-              style={{ padding: '10px', background: '#14141a', border: '1px solid #262632', color: '#fff', borderRadius: '8px', fontSize: '13.5px' }} />
+            <input
+              type="text"
+              placeholder={entryType === 'course' ? "e.g. Deep Learning Specialization" : "e.g. Attention Is All You Need"}
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              className="p-2.5 bg-black/10 border border-dynamic rounded-lg text-sm text-dynamic-primary focus:outline-none focus:border-[var(--accent-color)]"
+            />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold tracking-widest text-dynamic-secondary uppercase">
                 {entryType === 'course' ? 'Platform / Institute' : 'Heading Context'}
               </label>
-              <input type="text" placeholder={entryType === 'course' ? "e.g. Coursera / Stanford" : "e.g. Transformers"} value={heading} onChange={(e) => setHeading(e.target.value)}
-                style={{ padding: '10px', background: '#14141a', border: '1px solid #262632', color: '#fff', borderRadius: '8px', fontSize: '13.5px' }} />
+              <input
+                type="text"
+                placeholder={entryType === 'course' ? "e.g. Coursera" : "e.g. Transformers"}
+                value={heading}
+                onChange={(e) => setHeading(e.target.value)}
+                className="p-2.5 bg-black/10 border border-dynamic rounded-lg text-sm text-dynamic-primary focus:outline-none focus:border-[var(--accent-color)]"
+              />
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Taxonomy Tag</label>
-              <select value={tag} onChange={(e) => setTag(e.target.value)}
-                style={{ padding: '10px', background: '#14141a', border: '1px solid #262632', color: '#fff', borderRadius: '8px', fontSize: '13.5px', cursor: 'pointer' }}>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold tracking-widest text-dynamic-secondary uppercase">Taxonomy Tag</label>
+              <select
+                value={tag}
+                onChange={(e) => setTag(e.target.value)}
+                className="p-2.5 bg-black/10 border border-dynamic rounded-lg text-sm text-dynamic-primary cursor-pointer focus:outline-none"
+              >
                 <option value="Theory">Theory</option>
                 <option value="Implementation">Implementation</option>
                 <option value="Systems">Systems</option>
@@ -260,122 +300,174 @@ const NotesPage: React.FC<NotesPageProps> = ({ notes, onAddNote }) => {
 
           {/* DYNAMIC FORM SEGMENTS EXTENSION BASED ON TOGGLE STATE */}
           {entryType === 'course' && (
-            <div style={{ background: 'rgba(16, 185, 129, 0.04)', border: '1px dashed rgba(16, 185, 129, 0.2)', padding: '12px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', alignItems: 'center' }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Pricing Tier</label>
-                  <div style={{ display: 'flex', gap: '6px', marginTop: '2px' }}>
-                    <button type="button" onClick={() => setIsPaid(false)} style={{ flex: 1, padding: '6px', fontSize: '11px', border: '1px solid #262632', borderRadius: '4px', cursor: 'pointer', background: !isPaid ? '#10b981' : '#14141a', color: '#fff', fontWeight: 600 }}>Free</button>
-                    <button type="button" onClick={() => setIsPaid(true)} style={{ flex: 1, padding: '6px', fontSize: '11px', border: '1px solid #262632', borderRadius: '4px', cursor: 'pointer', background: isPaid ? '#eab308' : '#14141a', color: isPaid ? '#000' : '#fff', fontWeight: 600 }}>Paid</button>
+            <div className="bg-emerald-500/5 border border-dashed border-emerald-500/30 p-3 rounded-lg flex flex-col gap-3">
+              <div className="grid grid-cols-2 gap-3 items-center">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold tracking-widest text-dynamic-secondary uppercase">Pricing Tier</label>
+                  <div className="flex gap-1 mt-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsPaid(false)}
+                      className={`flex-1 py-1 text-[10px] font-semibold border rounded transition-colors ${!isPaid ? 'bg-emerald-600 border-emerald-500 text-white' : 'bg-black/10 border-dynamic text-dynamic-secondary'}`}
+                    >
+                      Free
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsPaid(true)}
+                      className={`flex-1 py-1 text-[10px] font-semibold border rounded transition-colors ${isPaid ? 'bg-amber-500 border-amber-400 text-black' : 'bg-black/10 border-dynamic text-dynamic-secondary'}`}
+                    >
+                      Paid
+                    </button>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Completion Progress</label>
-                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                    <input type="number" min="0" max="100" placeholder="%" value={progressPercent || ''} onChange={(e) => setProgressPercent(Number(e.target.value))}
-                      style={{ padding: '8px', background: '#14141a', border: '1px solid #262632', color: '#fff', borderRadius: '6px', fontSize: '12.5px', width: '100%' }} />
-                    <span style={{ position: 'absolute', right: '10px', fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>%</span>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold tracking-widest text-dynamic-secondary uppercase">Progress</label>
+                  <div className="relative flex items-center">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="%"
+                      value={progressPercent || ''}
+                      onChange={(e) => setProgressPercent(Number(e.target.value))}
+                      className="p-1.5 bg-black/10 border border-dynamic rounded-md text-sm text-dynamic-primary w-full pr-6 focus:outline-none"
+                    />
+                    <span className="absolute right-2 text-xs opacity-40">%</span>
                   </div>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Current Syllabus Milestone</label>
-                <input type="text" placeholder="e.g. Section 4: Convolutions" value={currentMilestone} onChange={(e) => setCurrentMilestone(e.target.value)}
-                  style={{ padding: '8px', background: '#14141a', border: '1px solid #262632', color: '#fff', borderRadius: '6px', fontSize: '12.5px' }} />
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold tracking-widest text-dynamic-secondary uppercase">Current Syllabus Milestone</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Course 2: Convolutions"
+                  value={currentMilestone}
+                  onChange={(e) => setCurrentMilestone(e.target.value)}
+                  className="p-1.5 bg-black/10 border border-dynamic rounded-md text-xs text-dynamic-primary focus:outline-none"
+                />
               </div>
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold tracking-widest text-dynamic-secondary uppercase">
               {entryType === 'course' ? 'Resource Portal / URL' : 'Source URL (Reference)'}
             </label>
-            <input type="url" placeholder="https://..." value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)}
-              style={{ padding: '10px', background: '#14141a', border: '1px solid #262632', color: '#fff', borderRadius: '8px', fontSize: '13.5px' }} />
+            <input
+              type="url"
+              placeholder="https://..."
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
+              className="p-2.5 bg-black/10 border border-dynamic rounded-lg text-sm text-dynamic-primary focus:outline-none focus:border-[var(--accent-color)]"
+            />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            <label style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] font-bold tracking-widest text-dynamic-secondary uppercase">
               {entryType === 'course' ? 'Strategic Intent & Objectives' : 'Core Notes & Analysis'}
             </label>
-            <textarea rows={ entryType === 'course' ? 4 : 6 } placeholder={entryType === 'course' ? "What specific framework capstone outputs are you gaining here?" : "Deconstruct optimization loops or proofs..."} value={noteContent} onChange={(e) => setNoteContent(e.target.value)} required
-              style={{ padding: '12px', background: '#14141a', border: '1px solid #262632', color: '#fff', borderRadius: '8px', fontSize: '13.5px', resize: 'none', lineHeight: '1.5' }} />
+            <textarea
+              rows={entryType === 'course' ? 4 : 6}
+              placeholder={entryType === 'course' ? "What specific milestone knowledge are you acquiring?" : "Deconstruct parameters, mathematical matrices..."}
+              value={noteContent}
+              onChange={(e) => setNoteContent(e.target.value)}
+              required
+              className="p-3 bg-black/10 border border-dynamic rounded-lg text-sm text-dynamic-primary resize-none leading-relaxed focus:outline-none focus:border-[var(--accent-color)]"
+            />
           </div>
 
-          <button type="submit"
-            style={{
-              background: entryType === 'course' ? '#10b981' : '#4f8cff',
-              color: 'white', border: 'none', borderRadius: '8px', padding: '12px', fontWeight: 'bold', cursor: 'pointer', fontSize: '14px', transition: 'all 0.2s'
-            }}>
+          <button
+            type="submit"
+            className={`w-full py-2.5 text-xs font-bold uppercase tracking-widest rounded-lg shadow transition-opacity hover:opacity-90 text-white ${
+              entryType === 'course' ? 'bg-emerald-600' : 'bg-[var(--accent-color)]'
+            }`}
+          >
             Commit to Knowledge Matrix
           </button>
         </form>
 
-        {/* FEED: UNIFIED RENDER FILTER LANE */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
+        {/* FEED STREAM CONTAINER */}
+        <div className="flex flex-col gap-5 w-full">
           {filteredNotes.map((item) => {
             const isCourse = item.type === 'course';
             return (
-              <div key={item.id}
+              <div
+                key={item.id}
+                className="rounded-2xl border p-6 flex flex-col gap-3.5 relative backdrop-blur-xl transition-all duration-300 hover:border-dynamic-primary"
                 style={{
-                  background: '#07070a', border: `1px solid ${isCourse ? 'rgba(16, 185, 129, 0.15)' : '#16161c'}`, borderRadius: '14px',
-                  padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px', position: 'relative'
-                }}>
-
-                {/* Top metadata tracking lane */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '10.5px', textTransform: 'uppercase', background: isCourse ? 'rgba(16, 185, 129, 0.1)' : 'rgba(79, 140, 255, 0.1)', color: isCourse ? '#10b981' : '#4f8cff', border: `1px solid ${isCourse ? 'rgba(16, 185, 129, 0.2)' : 'rgba(79, 140, 255, 0.2)'}`, padding: '2px 8px', borderRadius: '4px', fontWeight: 'bold' }}>
+                  backgroundColor: 'var(--bg-glass)',
+                  borderColor: isCourse ? 'rgba(16, 185, 129, 0.25)' : 'var(--border-glass)'
+                }}
+              >
+                {/* Top tracking line */}
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-2 items-center">
+                    <span className={`text-[9px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                      isCourse
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                        : 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                    }`}>
                       {isCourse ? '🎓 Course' : '📝 Research'}
                     </span>
-                    <span style={{ fontSize: '10.5px', background: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.6)', padding: '2px 6px', borderRadius: '4px' }}>
+                    <span className="text-[9px] font-mono tracking-wide px-2 py-0.5 rounded bg-[var(--pill-bg)] border border-dynamic text-dynamic-secondary">
                       {item.tag}
                     </span>
                     {isCourse && (
-                      <span style={{ fontSize: '10px', textTransform: 'uppercase', background: item.isPaid ? 'rgba(234, 179, 8, 0.1)' : 'rgba(255,255,255,0.05)', color: item.isPaid ? '#eab308' : 'rgba(255,255,255,0.4)', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
-                        {item.isPaid ? 'Paid' : 'Free Tier'}
+                      <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded ${
+                        item.isPaid ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-slate-500/10 text-slate-400'
+                      }`}>
+                        {item.isPaid ? 'Premium Tier' : 'Open Source'}
                       </span>
                     )}
                   </div>
-                  <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>{item.date}</span>
+                  <span className="text-[10px] font-mono opacity-40">{item.date}</span>
                 </div>
 
-                {/* Title & Section Headings Hierarchy */}
+                {/* Title and context mapping */}
                 <div>
-                  <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>{item.heading}</span>
-                  <h4 style={{ margin: '2px 0 0 0', fontSize: '18px', fontWeight: 800, color: '#fff', letterSpacing: '-0.3px' }}>{item.title}</h4>
+                  <span className="text-xs text-dynamic-secondary font-medium tracking-wide">{item.heading}</span>
+                  <h4 className="text-lg font-bold tracking-tight text-dynamic-primary mt-0.5">{item.title}</h4>
                 </div>
 
-                {/* VISUAL COMPONENT LAYER IF IT'S A COURSE TRACKING TARGET */}
+                {/* COURSE DETAILED PROGRESS ENGINE */}
                 {isCourse && (
-                  <div style={{ background: '#101016', border: '1px solid #1a1a24', padding: '14px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px' }}>
-                      <span style={{ color: 'rgba(255,255,255,0.5)' }}>Current Step: <strong style={{ color: '#fff' }}>{item.currentMilestone}</strong></span>
-                      <span style={{ color: '#10b981', fontWeight: 'bold' }}>{item.progressPercent}%</span>
+                  <div className="bg-black/10 border border-dynamic p-3.5 rounded-xl flex flex-col gap-2">
+                    <div className="flex justify-between text-xs font-mono">
+                      <span className="text-dynamic-secondary">Active Segment: <strong className="text-dynamic-primary font-sans">{item.currentMilestone}</strong></span>
+                      <span className="text-emerald-400 font-bold">{item.progressPercent}%</span>
                     </div>
-                    {/* Native CSS Tracking Bar */}
-                    <div style={{ width: '100%', height: '6px', background: '#222', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div style={{ width: `${item.progressPercent}%`, height: '100%', background: '#10b981', transition: 'width 0.4s ease' }} />
+                    {/* Visual Tracking bar */}
+                    <div className="w-full h-1.5 bg-black/30 rounded-full overflow-hidden border border-dynamic">
+                      <div
+                        className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                        style={{ width: `${item.progressPercent}%` }}
+                      />
                     </div>
                   </div>
                 )}
 
-                <hr style={{ border: 'none', height: '1px', background: '#161622', margin: '4px 0' }} />
+                <div className="h-[1px] w-full border-b border-dynamic opacity-60" />
 
-                {/* Central Text Content */}
-                <p style={{ margin: 0, fontSize: '13.5px', color: 'rgba(255,255,255,0.75)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>
+                {/* Main Raw Payload Text */}
+                <p className="text-sm text-dynamic-secondary leading-relaxed whitespace-pre-wrap font-sans">
                   {item.note}
                 </p>
 
-                {/* Interactive Anchor */}
+                {/* Reference Link Nodes */}
                 {item.sourceUrl && (
-                  <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '4px' }}>
-                    <a href={item.sourceUrl} target="_blank" rel="noopener noreferrer"
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: isCourse ? '#10b981' : '#4f8cff', textDecoration: 'none', fontWeight: 700 }}>
-                      🔗 {isCourse ? 'Access Course Portal / Syllabus' : 'Review Reference Source Material'}
+                  <div className="flex justify-start mt-1">
+                    <a
+                      href={item.sourceUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center gap-1.5 text-xs font-bold tracking-wide transition-opacity hover:opacity-70 ${
+                        isCourse ? 'text-emerald-400' : 'text-[var(--accent-color)]'
+                      }`}
+                    >
+                      🔗 {isCourse ? 'Launch Course Portal' : 'Access Whitepaper Reference'}
                     </a>
                   </div>
                 )}
@@ -384,8 +476,8 @@ const NotesPage: React.FC<NotesPageProps> = ({ notes, onAddNote }) => {
           })}
 
           {filteredNotes.length === 0 && (
-            <div style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: '14px', background: '#0b0b10', borderRadius: '12px', border: '1px dashed #16161c' }}>
-              No items indexed matching filters.
+            <div className="p-12 text-center text-xs font-mono text-dynamic-secondary rounded-2xl border border-dashed border-dynamic bg-[var(--pill-bg)]">
+              No index entries found matching active telemetry attributes.
             </div>
           )}
         </div>

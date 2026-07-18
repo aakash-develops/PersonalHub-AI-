@@ -1,8 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 
-// GLOBAL CONTRAST ADJUSTMENT: Using pure black background instead of deep blue
-// to maximize text legibility on all pages.
-const BG = "#000000";
+const BG = "#020108";
 
 type RGB = [number, number, number];
 
@@ -187,11 +186,10 @@ function buildEdgeGalaxy(coreCol: RGB, bandCol: RGB, halfLen: number): HTMLCanva
   return cv;
 }
 
-// ─── HIGH-QUALITY PLANET RENDERING ────────────────────────────────────────────
+// ─── HIGH-QUALITY PLANET RENDERING ───────────────────────────────────────────
 function drawPlanetAndRings(ctx: CanvasRenderingContext2D, p: Planet) {
   const { x, y, rad } = p;
 
-  // 1. Rear Corona backglow
   const backlightX = x + rad * 0.6;
   const backlightY = y - rad * 0.1;
   const coronaGr = ctx.createRadialGradient(backlightX, backlightY, rad * 0.2, x, y, rad * 2.1);
@@ -227,16 +225,13 @@ function drawPlanetAndRings(ctx: CanvasRenderingContext2D, p: Planet) {
     ctx.restore();
   };
 
-  // 2. Render back ring segment
   drawRingSegment(Math.PI, Math.PI * 2);
 
-  // 3. Render Solid Spherical Body
   ctx.save();
   ctx.beginPath();
   ctx.arc(x, y, rad, 0, Math.PI * 2);
   ctx.clip();
 
-  // Base texture
   const baseGr = ctx.createLinearGradient(x - rad, y + rad, x + rad, y - rad);
   baseGr.addColorStop(0, "#120d1a");
   baseGr.addColorStop(0.5, "#2a1e34");
@@ -244,7 +239,6 @@ function drawPlanetAndRings(ctx: CanvasRenderingContext2D, p: Planet) {
   ctx.fillStyle = baseGr;
   ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2);
 
-  // Surface geography masks
   ctx.fillStyle = "rgba(18, 10, 24, 0.5)";
   ctx.beginPath();
   ctx.ellipse(x - rad * 0.2, y + rad * 0.3, rad * 0.5, rad * 0.25, -0.2, 0, Math.PI * 2);
@@ -254,7 +248,6 @@ function drawPlanetAndRings(ctx: CanvasRenderingContext2D, p: Planet) {
   ctx.ellipse(x + rad * 0.1, y - rad * 0.4, rad * 0.4, rad * 0.15, 0.1, 0, Math.PI * 2);
   ctx.fill();
 
-  // 3D Shadow overlay with rim glowing edge
   const shadowGr = ctx.createRadialGradient(
     x - rad * 0.4, y + rad * 0.1, rad * 0.3,
     x - rad * 0.1, y + rad * 0.1, rad * 1.05
@@ -268,10 +261,8 @@ function drawPlanetAndRings(ctx: CanvasRenderingContext2D, p: Planet) {
 
   ctx.restore();
 
-  // 4. Render foreground ring segment
   drawRingSegment(0, Math.PI);
 
-  // 5. Ambient Atmospheric Ring Glow
   const rimGr = ctx.createRadialGradient(x, y, rad * 0.88, x, y, rad);
   rimGr.addColorStop(0, "rgba(0,0,0,0)");
   rimGr.addColorStop(1, clr(255, 180, 185, 0.45));
@@ -348,12 +339,13 @@ function initScene(w: number, h: number) {
   };
 }
 
-// ─── EXPORT COMPONENT ────────────────────────────────────────────────────────
+// ─── REUSABLE CORE COSMO BACKGROUND COMPONENT ───────────────────────────────
 interface CosmicBackgroundProps {
+  theme?: string;
   children?: React.ReactNode;
 }
 
-export const CosmicBackground: React.FC<CosmicBackgroundProps> = ({ children }) => {
+export function CosmicBackground({ theme, children }: CosmicBackgroundProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -462,7 +454,6 @@ export const CosmicBackground: React.FC<CosmicBackgroundProps> = ({ children }) 
           nova.phase++;
 
           if (nova.phase === 1) {
-            // Debris
             for (let i = 0; i < 130; i++) {
               const ang = rnd(0, Math.PI * 2);
               const spd = rnd(0.4, 4.0);
@@ -476,7 +467,6 @@ export const CosmicBackground: React.FC<CosmicBackgroundProps> = ({ children }) 
               });
             }
 
-            // White flashes
             for (let i = 0; i < 35; i++) {
               const ang = rnd(0, Math.PI * 2);
               const spd = rnd(3.0, 8.5);
@@ -579,10 +569,9 @@ export const CosmicBackground: React.FC<CosmicBackgroundProps> = ({ children }) 
         return nova.phase <= 3;
       });
 
-      // GLOBAL CONTRAST ADJUSTMENT: Darkened vignette to make your content pop
       const vignette = ctx.createRadialGradient(w/2, h/2, h * 0.12, w/2, h/2, Math.max(w, h) * 0.85);
       vignette.addColorStop(0, "rgba(0,0,0,0)");
-     vignette.addColorStop(1, "rgba(0,0,0,0.75)");
+      vignette.addColorStop(1, "rgba(2,0,8,0.72)");
       ctx.fillStyle = vignette;
       ctx.fillRect(0, 0, w, h);
 
@@ -609,22 +598,28 @@ export const CosmicBackground: React.FC<CosmicBackgroundProps> = ({ children }) 
   }, []);
 
   return (
-    <div className="fixed inset-0 -z-50 pointer-events-none overflow-hidden">
-      {/* 1. The custom high-quality canvas background */}
-      <canvas ref={canvasRef} className="absolute inset-0 block pointer-events-auto" />
+    <div className="fixed inset-0 w-full h-full -z-50 pointer-events-none overflow-hidden bg-[#020108]">
+      {/* 🌌 THE UNTOUCHED LIVE ENGINE CANVAS LAYERING */}
+      <canvas
+        ref={canvasRef}
+        className="block w-full h-full transition-opacity duration-700 ease-in-out"
+        style={{ opacity: theme === 'crystal' ? 0.08 : 1 }}
+      />
 
-      {/*
-          2. THE CONTRAST SHIELD:
-          We lay a dark, fading overlay over the top of the space animation.
-          This is what keeps your text stark and legible on EVERY PAGE
-          without reducing the visual energy of the planets.
-      */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/45 to-black/60 pointer-events-none" />
+      {/* 💎 THE RECONCILED PURE CRYSTAL MODE OVERLAY */}
+      <div
+        className="absolute inset-0 pointer-events-none transition-all duration-700 ease-in-out"
+        style={{
+          backgroundColor: '#ffffff',
+          opacity: theme === 'crystal' ? 0.96 : 0
+        }}
+      />
 
-      {/* 3. The page pages and dashboard structures rendered above */}
-      <div className="absolute inset-0 pointer-events-auto z-10 overflow-y-auto">
-        {children}
-      </div>
+      {children && (
+        <div className="absolute inset-0 pointer-events-auto z-10">
+          {children}
+        </div>
+      )}
     </div>
   );
-};
+}

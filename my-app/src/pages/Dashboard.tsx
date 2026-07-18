@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import CircularProgress from "../components/common/CircularProgress";
 import DashboardCard from "../components/common/DashboardCard";
 import DashboardGrid from "../components/common/DashboardGrid";
+import { useTheme } from "../components/layout/ThemeProvider";
 import type { AppDatabaseState } from "../types/schema";
 import "../App.css";
 
@@ -31,10 +32,13 @@ interface DashboardProps {
   };
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ db, metrics }) => {
+const Dashboard: React.FC<DashboardProps> = ({ metrics }) => {
   const navigate = useNavigate();
+  const { theme } = useTheme();
   const [studyLogs, setStudyLogs] = useState<StudyLog[]>([]);
   const [isMatrixExpanded, setIsMatrixExpanded] = useState(false);
+
+  const isCosmic = theme === "cosmic";
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -67,15 +71,19 @@ const Dashboard: React.FC<DashboardProps> = ({ db, metrics }) => {
     const cellDateTime = new Date(year, month - 1, day);
 
     if (cellDateTime > today) {
-      return { bg: 'rgba(255, 255, 255, 0.02)', border: 'transparent' };
+      return isCosmic
+        ? { bg: 'rgba(255, 255, 255, 0.04)', border: 'transparent' }
+        : { bg: 'rgba(0, 0, 0, 0.04)', border: 'transparent' };
     }
     if (!minutes || minutes === 0) {
-      return { bg: 'rgba(235, 94, 85, 0.08)', border: 'rgba(235, 94, 85, 0.15)' };
+      return isCosmic
+        ? { bg: 'rgba(235, 94, 85, 0.12)', border: 'rgba(235, 94, 85, 0.25)' }
+        : { bg: 'rgba(235, 94, 85, 0.08)', border: 'rgba(235, 94, 85, 0.2)' };
     }
-    if (minutes <= 30) return { bg: '#0b3a20', border: 'transparent' };
-    if (minutes <= 60) return { bg: '#005a28', border: 'transparent' };
-    if (minutes <= 120) return { bg: '#1f8a34', border: 'transparent' };
-    return { bg: '#1dd1a1', border: 'rgba(29, 209, 161, 0.3)' };
+    if (minutes <= 30) return { bg: isCosmic ? '#0e4a29' : '#c6f6d5', border: 'transparent' };
+    if (minutes <= 60) return { bg: isCosmic ? '#047857' : '#9decb9', border: 'transparent' };
+    if (minutes <= 120) return { bg: isCosmic ? '#059669' : '#4ade80', border: 'transparent' };
+    return { bg: '#10b981', border: 'rgba(16, 185, 129, 0.4)' };
   };
 
   const allMonthsData = useMemo(() => {
@@ -102,178 +110,169 @@ const Dashboard: React.FC<DashboardProps> = ({ db, metrics }) => {
   }, [allMonthsData]);
 
   return (
-    <div
-      className="dashboard-container page-fade-in"
-      style={{
-        maxWidth: '1440px',
-        height: '100vh',
-        margin: '0 auto',
-        padding: '32px 40px',
-        color: '#ffffff',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Inter", sans-serif',
-        display: 'flex',
-        flexDirection: 'column',
-        boxSizing: 'border-box',
-        overflow: 'hidden'
-      }}
-    >
+    <div className="w-full h-screen max-w-[1480px] mx-auto p-6 md:p-10 flex flex-col box-border overflow-hidden bg-transparent text-dynamic-primary font-sans select-none">
 
-      {/* HEADER SECTION */}
-      <header style={{ flexShrink: 0, marginBottom: '28px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: 300, margin: '0 0 4px 0', letterSpacing: '-0.5px' }}>
-          System <span style={{ fontWeight: 600, color: '#a55eea' }}>Core</span> Workspace
-        </h1>
-        <p style={{ margin: 0, fontSize: '12px', color: 'rgba(255, 255, 255, 0.35)' }}>
-          Real-time execution diagnostics engine active.
-        </p>
+      {/* GLOWING HEADER BLOCK */}
+      <header className="flex-shrink-0 mb-10 border-b border-dynamic/60 pb-5 flex justify-between items-end">
+        <div>
+          <h1 className="text-3xl font-black tracking-tight m-0 text-dynamic-primary uppercase font-mono">
+            Quantum Command Hub
+          </h1>
+          <p className="m-0 mt-1.5 text-xs text-dynamic-primary font-semibold font-mono tracking-wider opacity-90 dark:text-zinc-300">
+            Execution analytics interface live.
+          </p>
+        </div>
+        <div className="text-xs font-mono font-bold uppercase hidden sm:block tracking-widest text-dynamic-primary opacity-80">
+          Node Status: Operational
+        </div>
       </header>
 
-      {/* DISTINCT ZONE SPLIT LAYOUT WITH ENHANCED GAP SEPARATION */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1px 260px', // Shrinks matrix width and allocates more priority to the left
-          gap: '56px', // Massive gap pushing the matrix further to the right edge
-          flex: 1,
-          minHeight: 0
-        }}
-      >
+      {/* ASYMMETRIC VISUALIZATION INTERFACE */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 flex-1 min-h-0">
 
-        {/* ZONE A (LEFT): PRIMARY FEATURE MODULE CONTAINER */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px', minHeight: 0 }}>
+        {/* LEFT COLUMN: PRIMARY DIALS & COMPONENTS (8/12 Width) */}
+        <div className="lg:col-span-8 flex flex-col gap-8 min-h-0">
 
-          {/* Main Indices: Side-by-Side Progress Rings */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', flexShrink: 0 }}>
-            <div style={progressPanelStyle('#4f8cff')}>
-              <div>
-                <h3 style={panelLabelStyle}>Daily Execution Index</h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>Routine task targets</p>
+          {/* HIGH-POWER ANALYTIC INTERFACES */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 flex-shrink-0">
+
+            {/* Index Dials */}
+            <div className="relative group overflow-hidden rounded-2xl border-2 border-dynamic bg-[var(--bg-glass)] bg-opacity-70 dark:bg-zinc-900/40 p-8 flex items-center justify-between shadow-xl min-h-[160px]">
+              <div className="absolute top-0 left-0 bottom-0 w-[5px] bg-pink-500" />
+              <div className="flex flex-col gap-1.5 max-w-[60%]">
+                <span className="text-xs font-extrabold font-mono text-pink-500 uppercase tracking-widest">DAILY INDEX</span>
+                <h3 className="text-xl font-black tracking-tight text-dynamic-primary mt-1">Routine Target Flow</h3>
+                <p className="text-xs font-semibold text-dynamic-primary opacity-80 dark:text-zinc-300 m-0 font-mono">Dynamic queue checklists</p>
               </div>
               <CircularProgress
                 value={metrics.currentDailyTasks}
                 max={metrics.maxDailyTasks}
                 label={`${metrics.currentDailyTasks}/${metrics.maxDailyTasks}`}
-                color="#4f8cff"
-                size={85}
+                color="#ec4899"
+                size={105}
               />
             </div>
 
-            <div style={progressPanelStyle('#2ee59d')}>
-              <div>
-                <h3 style={panelLabelStyle}>Weekly Output Target</h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: 'rgba(255,255,255,0.3)' }}>Macro milestone achievements</p>
+            <div className="relative group overflow-hidden rounded-2xl border-2 border-dynamic bg-[var(--bg-glass)] bg-opacity-70 dark:bg-zinc-900/40 p-8 flex items-center justify-between shadow-xl min-h-[160px]">
+              <div className="absolute top-0 left-0 bottom-0 w-[5px] bg-cyan-400" />
+              <div className="flex flex-col gap-1.5 max-w-[60%]">
+                <span className="text-xs font-extrabold font-mono text-cyan-400 uppercase tracking-widest">WEEKLY OUTPUT</span>
+                <h3 className="text-xl font-black tracking-tight text-dynamic-primary mt-1">Milestone Capacity</h3>
+                <p className="text-xs font-semibold text-dynamic-primary opacity-80 dark:text-zinc-300 m-0 font-mono">Macro operational targets</p>
               </div>
               <CircularProgress
                 value={metrics.currentWeeklyGoals}
                 max={metrics.maxWeeklyGoals}
                 label={`${metrics.currentWeeklyGoals}/${metrics.maxWeeklyGoals}`}
-                color="#2ee59d"
-                size={85}
+                color="#22d3ee"
+                size={105}
               />
             </div>
+
           </div>
 
-          {/* Feature Grid Segment */}
-          <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px' }} className="hide-scrollbar">
-            <h2 style={sectionTitleStyle}>Operational Components</h2>
+          {/* DYNAMIC COMPONENT CHIPS */}
+          <div className="flex-1 overflow-y-auto pr-2 hide-scrollbar">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="text-xs text-dynamic-primary dark:text-zinc-300 tracking-[2px] font-black font-mono uppercase">
+                System Core Branches
+              </span>
+              <div className="flex-1 h-[1px] bg-dynamic/50" />
+            </div>
+
             <DashboardGrid>
-              <div onClick={() => navigate("/projects")} style={gridInteractiveWrapper}>
-                <DashboardCard title="Active Projects" value={metrics.activeProjects} subtitle="Threshold" color="#a55eea" />
-              </div>
-              <div onClick={() => navigate("/roadmap")} style={gridInteractiveWrapper}>
-                <DashboardCard title="ML Roadmap" value={metrics.currentWeekStr} subtitle="Active Curriculum" color="#ff9f43" />
-              </div>
-              <div onClick={() => navigate("/notes")} style={gridInteractiveWrapper}>
-                <DashboardCard title="Learning Notes" value={metrics.savedNotesCount} subtitle="Documented Logs" color="#ff5c75" />
-              </div>
-              <div onClick={() => navigate("/history/github")} style={gridInteractiveWrapper}>
-                <DashboardCard title="GitHub Dev Engine" value={metrics.totalCommits} subtitle="Live Sync Matrix" color="#00d2d3" />
-              </div>
-              <div onClick={() => navigate("/jobs")} style={gridInteractiveWrapper}>
-                <DashboardCard title="Job Tracker" value={metrics.jobApplicationsCount} subtitle="Applications" color="#54a0ff" />
-              </div>
-              <div onClick={() => navigate("/finnish")} style={gridInteractiveWrapper}>
-                <DashboardCard title="Finnish Hub" value={metrics.finnishPracticeStr} subtitle="Speaking Track" color="#ffca28" />
-              </div>
+              <DashboardCard onClick={() => navigate("/projects")} title="Active Projects" value={metrics.activeProjects} subtitle="Threshold tracking node" color="#a55eea" />
+              <DashboardCard onClick={() => navigate("/roadmap")} title="ML Roadmap" value={metrics.currentWeekStr} subtitle="Curriculum phase vector" color="#ff9f43" />
+              <DashboardCard onClick={() => navigate("/notes")} title="Learning Notes" value={metrics.savedNotesCount} subtitle="Documented ledger index" color="#ff5c75" />
+              <DashboardCard onClick={() => navigate("/history/github")} title="GitHub Dev Engine" value={metrics.totalCommits} subtitle="Live repository sync telemetry" color="#00d2d3" />
+              <DashboardCard onClick={() => navigate("/jobs")} title="Job Tracker" value={metrics.jobApplicationsCount} subtitle="Funnel applications status" color="#54a0ff" />
+              <DashboardCard onClick={() => navigate("/finnish")} title="Finnish Hub" value={metrics.finnishPracticeStr} subtitle="Language tracking matrix" color="#eab308" />
             </DashboardGrid>
           </div>
 
         </div>
 
-        {/* VISUAL BOUNDARY DIVISION */}
-        <div style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.00), rgba(255,255,255,0.05), rgba(255,255,255,0.00))', height: '80%', alignSelf: 'center' }} />
-
-        {/* ZONE B (RIGHT): SEPARATED & MINIMAL SIDEBAR LAYER */}
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'flex-start' }}>
-          <h2 style={sectionTitleStyle}>Secondary Telemetry</h2>
+        {/* RIGHT COLUMN: RADAR THERMAL FEED (4/12 Width) */}
+        <div className="lg:col-span-4 flex flex-col h-full min-h-0">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="text-xs text-dynamic-primary dark:text-zinc-300 tracking-[2px] font-black font-mono uppercase">
+              Thermal Radar Map
+            </span>
+            <div className="flex-1 h-[1px] bg-dynamic/50" />
+          </div>
 
           <div
             onClick={() => setIsMatrixExpanded(true)}
-            style={sideMatrixContainerStyle}
-            title="Click to zoom annual history"
+            className="group relative bg-[var(--bg-glass)] bg-opacity-70 dark:bg-zinc-900/40 border-2 border-dynamic rounded-2xl p-6 cursor-pointer shadow-xl flex flex-col justify-between transition-all duration-300 hover:border-dynamic-primary/50 min-h-[280px]"
+            title="Expand Ledger Display Matrix"
           >
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <h3 style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', margin: 0, letterSpacing: '0.2px' }}>
-                  Habit Radar
-                </h3>
-                <span style={{ fontSize: '9px', color: '#1dd1a1', background: 'rgba(29, 209, 161, 0.08)', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+              <div className="flex justify-between items-start mb-3">
+                <div>
+                  <h3 className="text-base font-black tracking-tight m-0 text-dynamic-primary">Consistency Ledger</h3>
+                  <p className="m-0 mt-1 text-xs font-semibold text-dynamic-primary opacity-70 dark:text-zinc-400 font-mono">{currentMonthData.name}</p>
+                </div>
+                <span className={`text-xs font-mono px-2.5 py-1 rounded font-black ${isCosmic ? 'text-emerald-400 bg-emerald-500/20 border border-emerald-500/30' : 'text-emerald-800 bg-emerald-100 border border-emerald-200'}`}>
                   IDX {metrics.habitConsistencyStr}
                 </span>
               </div>
-              <p style={{ margin: 0, fontSize: '11px', color: 'rgba(255,255,255,0.35)' }}>
-                Segment: {currentMonthData.name}
-              </p>
             </div>
 
-            {/* Dense isolated heatmap module */}
-            <div style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.01)', margin: '16px 0' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '3.5px' }}>
+            {/* Micro-Thermal Plot Array */}
+            <div className="bg-[var(--pill-bg)] bg-opacity-90 p-4 rounded-xl border-2 border-dynamic/80 my-5">
+              <div className="grid grid-cols-6 gap-2">
                 {currentMonthData.days.map((dateStr, dIdx) => {
                   const totalMins = minutesByDate[dateStr] || 0;
                   const style = getGridColor(totalMins, dateStr);
                   return (
                     <div
                       key={dIdx}
-                      style={{
-                        aspectRatio: '1/1',
-                        backgroundColor: style.bg,
-                        border: `1px solid ${style.border}`,
-                        borderRadius: '2px'
-                      }}
+                      style={{ aspectRatio: '1/1', backgroundColor: style.bg, borderColor: style.border }}
+                      className="rounded-[4px] border-2 transition-transform duration-200 group-hover:scale-[1.08]"
                     />
                   );
                 })}
               </div>
             </div>
 
-            <div style={{ textAlign: 'center', fontSize: '11px', color: 'rgba(255,255,255,0.25)', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '12px' }}>
-              Analyze Annual Deck ↗
+            <div className="text-center text-xs font-bold font-mono text-dynamic-primary dark:text-zinc-300 pt-3 border-t-2 border-dynamic/50 group-hover:text-dynamic-primary transition-colors tracking-wider">
+              INSPECT FULL SYSTEM RECORD ↗
             </div>
           </div>
         </div>
 
       </div>
 
-      {/* OVERLAY POPUP COMPONENT DECK */}
+      {/* OVERLAY POPUP LEDGER VIEW */}
       {isMatrixExpanded && (
-        <div style={modalOverlayStyle} onClick={() => setIsMatrixExpanded(false)}>
-          <div style={modalContentStyle} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in"
+          onClick={() => setIsMatrixExpanded(false)}
+        >
+          <div
+            className="bg-[var(--bg-glass)] border-2 border-dynamic rounded-2xl w-full max-w-[1000px] p-8 shadow-2xl backdrop-blur-3xl text-dynamic-primary relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-6 border-b-2 border-dynamic pb-4">
               <div>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Annual Consistency Ledger</h2>
-                <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.35)' }}>System history overview ledger</p>
+                <h2 className="m-0 text-xl font-black uppercase font-mono tracking-tight">LOG CONSISTENCY DECK</h2>
+                <p className="m-0 mt-1 text-xs font-semibold text-dynamic-primary opacity-70 dark:text-zinc-300 font-mono">Comprehensive historical execution log grid</p>
               </div>
-              <button onClick={() => setIsMatrixExpanded(false)} style={closeButtonStyle}>✕ Close Deck</button>
+              <button
+                onClick={() => setIsMatrixExpanded(false)}
+                className="bg-[var(--pill-bg)] border-2 border-dynamic text-dynamic-primary font-bold text-xs font-mono px-5 py-2.5 rounded-xl cursor-pointer hover:bg-dynamic/20 transition-all shadow-md"
+              >
+                ✕ CLOSE ENGINE
+              </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 max-h-[65vh] overflow-y-auto pr-2 hide-scrollbar">
               {allMonthsData.map((month) => (
-                <div key={month.name} style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '10px', padding: '12px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.5px' }}>
+                <div key={month.name} className="bg-[var(--pill-bg)] bg-opacity-95 border-2 border-dynamic rounded-xl p-4 flex flex-col justify-between">
+                  <div className="text-xs font-black text-dynamic-primary opacity-80 dark:text-zinc-300 uppercase mb-3 tracking-widest font-mono">
                     {month.name}
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '3px' }}>
+                  <div className="grid grid-cols-6 gap-1.5">
                     {month.days.map((dateStr, dIdx) => {
                       const totalMins = minutesByDate[dateStr] || 0;
                       const style = getGridColor(totalMins, dateStr);
@@ -281,16 +280,8 @@ const Dashboard: React.FC<DashboardProps> = ({ db, metrics }) => {
                         <div
                           key={dIdx}
                           title={`${dateStr} : ${totalMins} mins`}
-                          style={{
-                            aspectRatio: '1/1',
-                            backgroundColor: style.bg,
-                            border: `1px solid ${style.border}`,
-                            borderRadius: '1.5px',
-                            cursor: 'pointer',
-                            transition: 'transform 0.1s ease'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.3)'}
-                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                          style={{ aspectRatio: '1/1', backgroundColor: style.bg, borderColor: style.border }}
+                          className="rounded-[3px] border-2 cursor-pointer transition-transform duration-100 hover:scale-125 hover:z-10"
                         />
                       );
                     })}
@@ -302,90 +293,8 @@ const Dashboard: React.FC<DashboardProps> = ({ db, metrics }) => {
         </div>
       )}
 
-
     </div>
   );
-};
-
-// Layout Panel Tokens
-const progressPanelStyle = (accentColor: string): React.CSSProperties => ({
-  background: 'rgba(20, 26, 43, 0.35)',
-  backdropFilter: 'blur(20px)',
-  WebkitBackdropFilter: 'blur(20px)',
-  border: '1px solid rgba(255, 255, 255, 0.04)',
-  borderLeft: `3px solid ${accentColor}`,
-  borderRadius: '16px',
-  padding: '16px 24px',
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  boxShadow: '0 10px 30px rgba(0,0,0,0.15)'
-});
-
-const sideMatrixContainerStyle: React.CSSProperties = {
-  background: 'linear-gradient(145deg, #13182a, #0c101f)',
-  border: '1px solid rgba(255,255,255,0.02)',
-  borderRadius: '16px',
-  padding: '16px',
-  cursor: 'pointer',
-  boxShadow: '0 20px 40px rgba(0,0,0,0.25)',
-  transition: 'transform 0.2s ease'
-};
-
-const panelLabelStyle: React.CSSProperties = {
-  fontSize: '13px',
-  fontWeight: 600,
-  color: 'rgba(255,255,255,0.85)',
-  margin: 0,
-  letterSpacing: '0.2px'
-};
-
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: "10px",
-  color: "rgba(255,255,255,0.25)",
-  textTransform: "uppercase",
-  letterSpacing: "1.5px",
-  margin: "0 0 12px 0",
-  fontWeight: 700,
-  flexShrink: 0
-};
-
-const gridInteractiveWrapper: React.CSSProperties = {
-  cursor: 'pointer',
-  transition: 'transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1)'
-};
-
-const modalOverlayStyle: React.CSSProperties = {
-  position: 'fixed',
-  top: 0, left: 0, right: 0, bottom: 0,
-  backgroundColor: 'rgba(5, 8, 18, 0.85)',
-  backdropFilter: 'blur(8px)',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  zIndex: 1000,
-  padding: '20px'
-};
-
-const modalContentStyle: React.CSSProperties = {
-  background: '#0f1424',
-  border: '1px solid rgba(255,255,255,0.06)',
-  borderRadius: '20px',
-  width: '100%',
-  maxWidth: '920px',
-  padding: '28px',
-  boxShadow: '0 30px 80px rgba(0,0,0,0.6)'
-};
-
-const closeButtonStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.08)',
-  color: '#ffffff',
-  padding: '6px 12px',
-  borderRadius: '6px',
-  cursor: 'pointer',
-  fontSize: '11px',
-  fontWeight: 500
 };
 
 export default Dashboard;

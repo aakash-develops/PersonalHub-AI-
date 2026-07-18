@@ -2,7 +2,6 @@
 import React, { useState } from "react";
 import DashboardGrid from "../components/common/DashboardGrid";
 
-
 interface ProjectItem {
   id: string;
   name: string;
@@ -23,8 +22,6 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({ db, setDb }) => {
   const [name, setName] = useState("");
   const [priority, setPriority] = useState<"High" | "Medium" | "Low">("Medium");
   const [timeInput, setTimeInput] = useState<{ [key: string]: string }>({});
-
-  // Tab Filter State
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
 
   const projectsList: ProjectItem[] = db?.modules_data?.projects || [];
@@ -66,8 +63,8 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({ db, setDb }) => {
     }));
   };
 
-  const handleLogTime = (id: string) => {
-    const minutes = parseInt(timeInput[id] || "0", 10);
+  const handleLogTime = (id: string, customMinutes?: number) => {
+    const minutes = customMinutes ?? parseInt(timeInput[id] || "0", 10);
     if (isNaN(minutes) || minutes <= 0) return;
 
     setDb((prev: any) => ({
@@ -80,85 +77,79 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({ db, setDb }) => {
       }
     }));
 
-    setTimeInput((prev) => ({ ...prev, [id]: "" }));
+    if (!customMinutes) {
+      setTimeInput((prev) => ({ ...prev, [id]: "" }));
+    }
   };
 
-  // Filter Computation Engine
+  // 1. FILTER COMPUTATION ENGINE
   const filteredProjects = projectsList.filter((project) => {
     if (activeFilter === "High") return project.priority === "High";
     if (activeFilter === "Ongoing") return project.status === "Ongoing" || !project.status;
     if (activeFilter === "Completed") return project.status === "Completed";
-    return true; // "All"
+    return true;
   });
 
-  const getPriorityTheme = (p: "High" | "Medium" | "Low") => {
+  // 2. SMART PRIORITY-BASED SORTING ENGINE
+  // Ongoing drops by High -> Medium -> Low priority scale. Completed is pushed to the absolute bottom.
+  const sortedProjects = [...filteredProjects].sort((a, b) => {
+    if (a.status === "Completed" && b.status !== "Completed") return 1;
+    if (a.status !== "Completed" && b.status === "Completed") return -1;
+
+    const priorityWeight = { High: 3, Medium: 2, Low: 1 };
+    return (priorityWeight[b.priority] || 2) - (priorityWeight[a.priority] || 2);
+  });
+
+  const getPriorityThemeClasses = (p: "High" | "Medium" | "Low") => {
     if (p === "High") {
       return {
-        background: "linear-gradient(135deg, #2a0f14 0%, #150508 100%)",
-        border: "2px solid #ff5c75",
-        badgeBg: "rgba(255, 92, 117, 0.2)",
-        badgeText: "#ff8597",
-        glow: "rgba(255, 92, 117, 0.15) 0px 0px 20px"
+        cardBg: "bg-gradient-to-br from-red-950/20 to-black/40 backdrop-blur-md",
+        border: "border-red-500/40 focus-within:border-red-500",
+        badge: "bg-red-500/10 text-red-400 border-red-500/20",
+        glow: "shadow-[0_0_20px_rgba(239,68,68,0.08)]"
       };
     }
     if (p === "Medium") {
       return {
-        background: "linear-gradient(135deg, #0f1b36 0%, #060d1c 100%)",
-        border: "2px solid #4f8cff",
-        badgeBg: "rgba(79, 140, 255, 0.2)",
-        badgeText: "#82afff",
-        glow: "rgba(79, 140, 255, 0.15) 0px 0px 20px"
+        cardBg: "bg-gradient-to-br from-blue-950/20 to-black/40 backdrop-blur-md",
+        border: "border-blue-500/40 focus-within:border-blue-500",
+        badge: "bg-blue-500/10 text-blue-400 border-blue-500/20",
+        glow: "shadow-[0_0_20px_rgba(59,130,246,0.08)]"
       };
     }
     return {
-      background: "linear-gradient(135deg, #092419 0%, #030f0a 100%)",
-      border: "2px solid #1dd1a1",
-      badgeBg: "rgba(29, 209, 161, 0.2)",
-      badgeText: "#52e4bc",
-      glow: "rgba(29, 209, 161, 0.15) 0px 0px 20px"
+      cardBg: "bg-gradient-to-br from-emerald-950/20 to-black/40 backdrop-blur-md",
+      border: "border-emerald-500/40 focus-within:border-emerald-500",
+      badge: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+      glow: "shadow-[0_0_20px_rgba(16,185,129,0.08)]"
     };
   };
 
   return (
-    <div className="dashboard-container page-fade-in" style={{ maxWidth: "1000px" }}>
-      <div style={{ width: "100%", maxWidth: "850px", marginBottom: "8px" }}>
-        <h2 style={{ fontSize: "22px", fontWeight: 700, margin: "0 0 4px 0", color: "#ffffff" }}>
+    <div className="w-full max-w-[1000px] mx-auto p-4 md:p-6 box-border page-fade-in select-none" style={{ color: "var(--text-main)" }}>
+
+      {/* Title Header */}
+      <div className="w-full max-w-[850px] mb-4">
+        <h2 className="text-xl md:text-2xl font-bold tracking-tight m-0 uppercase" style={{ fontFamily: "var(--font-display)" }}>
           Project Pipeline Execution
         </h2>
-        <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.4)", margin: 0 }}>
+        <p className="text-xs md:text-sm m-0 mt-1" style={{ color: "var(--text-muted)" }}>
           Manage engineering instances, define critical scopes, and catalog developmental metrics.
         </p>
       </div>
 
-      {/* NEW FEATURE: ULTRA SLEEK FILTER SEGMENTATION TABS */}
-      <div style={{
-        width: "100%",
-        maxWidth: "850px",
-        display: "flex",
-        gap: "8px",
-        background: "#0d0d12",
-        padding: "6px",
-        borderRadius: "8px",
-        border: "1px solid #16161c",
-        marginTop: "8px"
-      }}>
+      {/* ULTRA SLEEK FILTER SEGMENTATION TABS */}
+      <div className="w-full max-w-[850px] flex gap-2 p-1.5 rounded-xl border mt-4 mb-6" style={{ backgroundColor: "var(--bg-glass)", borderColor: "var(--border-glass)" }}>
         {(["All", "High", "Ongoing", "Completed"] as FilterType[]).map((filter) => {
           const isActive = activeFilter === filter;
           return (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
+              className="flex-1 border-none rounded-lg py-2 px-4 text-xs font-semibold cursor-pointer transition-all duration-200"
               style={{
-                flex: 1,
-                background: isActive ? "#4f8cff" : "transparent",
-                color: isActive ? "#ffffff" : "rgba(255, 255, 255, 0.4)",
-                border: "none",
-                borderRadius: "6px",
-                padding: "8px 16px",
-                fontSize: "12px",
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "all 0.2s ease"
+                backgroundColor: isActive ? "var(--accent-color)" : "transparent",
+                color: isActive ? "var(--bg-fallback)" : "var(--text-muted)",
               }}
             >
               {filter} Pipelines
@@ -167,113 +158,87 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({ db, setDb }) => {
         })}
       </div>
 
-      <div style={{ width: "100%", maxWidth: "850px" }}>
+      {/* Grid Canvas */}
+      <div className="w-full max-w-[850px]">
         <DashboardGrid>
 
-          {/* DYNAMIC INSTANCE LIST RENDERING FROM ACTIVE FILTER */}
-          {filteredProjects.map((project) => {
-            const theme = getPriorityTheme(project.priority || "Medium");
+          {/* DYNAMIC INSTANCE LIST RENDERING */}
+          {sortedProjects.map((project) => {
+            const ui = getPriorityThemeClasses(project.priority || "Medium");
+            const isCompleted = project.status === "Completed";
+
             return (
               <div
                 key={project.id}
-                className="dashboard-card"
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  minHeight: "225px",
-                  background: theme.background,
-                  border: theme.border,
-                  boxShadow: `rgba(0, 0, 0, 0.3) 0px 19px 38px, rgba(0, 0, 0, 0.22) 0px 15px 12px, ${theme.glow}`
-                }}
+                className={`rounded-xl border p-5 flex flex-col justify-between min-h-[250px] transition-all duration-300 ${ui.cardBg} ${ui.border} ${ui.glow}`}
+                style={{ boxShadow: "var(--shadow-premium)" }}
               >
                 <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                    <span style={{
-                      fontSize: "10px",
-                      fontWeight: 800,
-                      textTransform: "uppercase",
-                      padding: "4px 10px",
-                      borderRadius: "4px",
-                      background: theme.badgeBg,
-                      color: theme.badgeText,
-                      border: `1px solid rgba(255,255,255,0.1)`,
-                      letterSpacing: "0.5px"
-                    }}>
+                  <div className="flex justify-between items-start mb-4">
+                    <span className={`text-[9px] font-black tracking-widest uppercase px-2.5 py-1 rounded-md border ${ui.badge}`}>
                       {project.priority || "Medium"}
                     </span>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleToggleComplete(project.id); }}
+                      className="text-[11px] font-bold py-1 px-2.5 rounded-md border cursor-pointer transition-colors duration-200"
                       style={{
-                        background: project.status === "Completed" ? "rgba(29, 209, 161, 0.2)" : "rgba(0,0,0,0.3)",
-                        border: project.status === "Completed" ? "1px solid #1dd1a1" : "1px solid rgba(255,255,255,0.15)",
-                        color: project.status === "Completed" ? "#1dd1a1" : "#ffffff",
-                        fontSize: "11px",
-                        padding: "4px 10px",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        fontWeight: 600,
-                        transition: "all 0.2s"
+                        backgroundColor: isCompleted ? "rgba(16, 185, 129, 0.15)" : "var(--pill-bg)",
+                        borderColor: isCompleted ? "rgb(16, 185, 129)" : "var(--border-subtle)",
+                        color: isCompleted ? "rgb(52, 211, 153)" : "var(--text-main)"
                       }}
                     >
-                      {project.status === "Completed" ? "✓ Done" : "Mark Done"}
+                      {isCompleted ? "✓ Done" : "Mark Done"}
                     </button>
                   </div>
 
-                  <h4 style={{ fontSize: "17px", fontWeight: 700, margin: "4px 0 8px 0", color: "#ffffff", letterSpacing: "0.3px" }}>
+                  <h4 className="text-base font-bold tracking-wide m-0 mb-2 truncate" style={{ color: "var(--text-main)" }}>
                     {project.name}
                   </h4>
-                  <p style={{ fontSize: "13px", color: "rgba(255,255,255,0.7)", margin: 0, fontWeight: 500 }}>
-                    🕒 Accrued Context: <span style={{ color: "#ffffff", fontWeight: 700 }}>{project.minutesTracked || 0} mins</span>
+                  <p className="text-xs font-medium m-0" style={{ color: "var(--text-muted)" }}>
+                    🕒 Accrued Context: <span className="font-bold font-mono" style={{ color: "var(--text-main)" }}>{project.minutesTracked || 0} mins</span>
                   </p>
                 </div>
 
-                <div style={{ marginTop: "16px", borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: "14px" }}>
-                  <div style={{ display: "flex", gap: "6px" }} onClick={(e) => e.stopPropagation()}>
+                <div className="mt-4 pt-3 border-t" style={{ borderColor: "var(--border-glass)" }}>
+
+                  {/* 3. QUICK LOG PRESET BUTTONS */}
+                  <div className="flex gap-1 mb-2">
+                    {["45", "60", "90"].map((mins) => (
+                      <button
+                        key={mins}
+                        onClick={() => handleLogTime(project.id, parseInt(mins, 10))}
+                        className="text-[10px] font-mono font-bold border rounded px-1.5 py-0.5 cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
+                        style={{ backgroundColor: "var(--bg-glass)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }}
+                      >
+                        +{mins}m
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="number"
                       placeholder="Mins"
                       value={timeInput[project.id] || ""}
                       onChange={(e) => setTimeInput({ ...timeInput, [project.id]: e.target.value })}
-                      style={{
-                        background: "rgba(0,0,0,0.4)",
-                        border: "1px solid rgba(255,255,255,0.2)",
-                        borderRadius: "6px",
-                        padding: "6px 10px",
-                        color: "#ffffff",
-                        fontSize: "12px",
-                        width: "75px"
-                      }}
+                      className="border rounded-lg px-3 py-1.5 text-xs font-mono w-20 focus:outline-none"
+                      style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }}
                     />
                     <button
                       onClick={() => handleLogTime(project.id)}
-                      style={{
-                        background: "rgba(255, 255, 255, 0.1)",
-                        border: "1px solid rgba(255, 255, 255, 0.15)",
-                        color: "#ffffff",
-                        fontSize: "11px",
-                        padding: "6px 12px",
-                        borderRadius: "6px",
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        flex: 1,
-                        transition: "background 0.2s"
-                      }}
+                      className="text-xs font-bold py-1.5 px-3 rounded-lg border cursor-pointer flex-1 transition-all duration-200"
+                      style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--card-bg-hover)"}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "var(--pill-bg)"}
                     >
                       Log Delta
                     </button>
                   </div>
 
-                  <div style={{
-                    fontSize: "10px",
-                    textAlign: "right",
-                    color: project.status === "Completed" ? "#1dd1a1" : "#ff9f43",
-                    fontWeight: 800,
-                    textTransform: "uppercase",
-                    marginTop: "10px",
-                    letterSpacing: "0.5px"
-                  }}>
-                    ● {project.status === "Completed" ? "Completed" : "Ongoing"}
+                  <div className="text-[10px] font-black tracking-wider text-right uppercase mt-3">
+                    <span style={{ color: isCompleted ? "rgb(52, 211, 153)" : "var(--secondary-accent)" }}>
+                      ● {isCompleted ? "Completed" : "Ongoing"}
+                    </span>
                   </div>
                 </div>
 
@@ -281,37 +246,21 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({ db, setDb }) => {
             );
           })}
 
-          {/* INITIALIZE BUTTON CARD: Positioned at the very end of the row context */}
+          {/* INITIALIZE BUTTON CARD */}
           <div
-            className="dashboard-card"
             onClick={() => setIsModalOpen(true)}
-            style={{
-              background: "#08080c",
-              border: "2px dashed #223152",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              minHeight: "225px",
-              gap: "12px",
-              textAlign: "center"
-            }}
+            className="rounded-xl border-2 border-dashed p-5 flex flex-col items-center justify-center min-h-[250px] gap-3 text-center cursor-pointer transition-all duration-300"
+            style={{ backgroundColor: "var(--bg-glass)", borderColor: "var(--border-subtle)" }}
+            onMouseEnter={(e) => e.currentTarget.style.borderColor = "var(--secondary-accent)"}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = "var(--border-subtle)"}
           >
-            <div style={{
-              width: "44px",
-              height: "44px",
-              borderRadius: "50%",
-              background: "rgba(79, 140, 255, 0.1)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#4f8cff",
-              fontSize: "22px",
-              fontWeight: "bold"
-            }}>+</div>
+            <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl font-bold border transition-colors duration-200"
+                 style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-glass)", color: "var(--secondary-accent)" }}>
+              +
+            </div>
             <div>
-              <div style={{ fontSize: "14px", fontWeight: 600, color: "#ffffff" }}>Initialize Instance</div>
-              <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.4)", marginTop: "2px" }}>Deploy new project tracker</div>
+              <div className="text-sm font-bold" style={{ color: "var(--text-main)" }}>Initialize Instance</div>
+              <div className="text-[11px] mt-0.5" style={{ color: "var(--text-muted)" }}>Deploy new project tracker</div>
             </div>
           </div>
 
@@ -320,16 +269,21 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({ db, setDb }) => {
 
       {/* PORTAL MODAL WINDOW OVERLAY */}
       {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontSize: "18px", margin: "0 0 20px 0", fontWeight: 700, color: "#ffffff" }}>Deploy Project Scope</h3>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setIsModalOpen(false)}>
+          <div
+            className="border w-full max-w-[440px] p-6 shadow-2xl rounded-xl"
+            style={{ backgroundColor: "var(--bg-fallback)", borderColor: "var(--border-glass)", color: "var(--text-main)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-base font-bold font-mono uppercase tracking-tight m-0 mb-5">Deploy Project Scope</h3>
 
-            <form onSubmit={handleCreateProject}>
-              <div className="form-group">
-                <label>Identifier Designation</label>
+            <form onSubmit={handleCreateProject} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold font-mono uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Identifier Designation</label>
                 <input
                   type="text"
-                  className="form-input"
+                  className="border rounded-lg p-2.5 text-xs focus:outline-none"
+                  style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }}
                   placeholder="e.g., Deep Learning Optimizer Engine"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -338,23 +292,36 @@ const ProjectsPage: React.FC<ProjectsPageProps> = ({ db, setDb }) => {
                 />
               </div>
 
-              <div className="form-group">
-                <label>Execution Priority Stack</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold font-mono uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Execution Priority Stack</label>
                 <select
-                  className="form-input"
+                  className="border rounded-lg p-2.5 text-xs focus:outline-none cursor-pointer"
+                  style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }}
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as any)}
-                  style={{ cursor: "pointer" }}
                 >
-                  <option value="Low">Low Priority (Green Layout)</option>
-                  <option value="Medium">Medium Priority (Blue Layout)</option>
-                  <option value="High">High Priority (Red Layout)</option>
+                  <option value="Low">Low Priority</option>
+                  <option value="Medium">Medium Priority</option>
+                  <option value="High">High Priority</option>
                 </select>
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "12px", marginTop: "24px" }}>
-                <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Initialize</button>
+              <div className="flex justify-end gap-3 mt-4">
+                <button
+                  type="button"
+                  className="text-xs font-mono font-bold px-4 py-2 rounded-lg border cursor-pointer"
+                  style={{ backgroundColor: "transparent", borderColor: "var(--border-subtle)", color: "var(--text-muted)" }}
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="text-white text-xs font-mono font-bold px-5 py-2 rounded-lg border shadow-sm cursor-pointer transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: "var(--accent-color)", borderColor: "var(--accent-color)" }}
+                >
+                  Initialize
+                </button>
               </div>
             </form>
           </div>

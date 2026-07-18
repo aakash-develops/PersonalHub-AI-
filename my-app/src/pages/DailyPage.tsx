@@ -1,5 +1,5 @@
 // src/pages/DailyPage.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import "../App.css";
 
 interface TaskItem {
@@ -18,40 +18,48 @@ interface DailyPageProps {
   onToggleTask?: (time: string) => void;
 }
 
-const FIXED_TIMELINE_SLOTS = [
-  "07:00 - 08:00",
-  "08:00 - 08:45",
-  "08:45 - 10:15",
-  "10:30 - 12:00",
-  "13:00 - 14:00",
-  "14:00 - 15:30",
-  "15:30 - 16:30",
-  "18:30 - 20:00",
-  "21:00 - 22:00",
-  "22:00 - 23:30"
-];
-
 const DEFAULT_TASKS: TaskItem[] = [
-  { task: "Wake + routine", scope: "Immediate morning alignment, glass of water, light stretching.", durationMins: 60 },
+  { task: "Wake + routine", scope: "Immediate morning alignment, water, light stretching.", durationMins: 60 },
   { task: "Finnish listening & speaking", scope: "Dedicated language immersion window. Pronunciation drills.", durationMins: 45 },
   { task: "ML theory study", scope: "Mathematical validation, papers, and architectural core concepts.", durationMins: 90 },
   { task: "ML coding practice", scope: "Pipeline engineering, model testing, and algorithmic building.", durationMins: 90 },
   { task: "Career (CV, LinkedIn, jobs)", scope: "Market tracking, resume optimization, outreach, and applications.", durationMins: 60 },
-  { task: "ML project building", scope: "Feature extraction, training cycles, and full-stack architecture implementation.", durationMins: 90 },
+  { task: "ML project building", scope: "Feature extraction, training cycles, and full-stack architecture.", durationMins: 90 },
   { task: "Exercise", scope: "Physical reset, cardio/lifting, and cognitive recovery window.", durationMins: 60 },
-  { task: "ML practice/project", scope: "Code refining, documentation tuning, and secondary project loops.", durationMins: 90 },
+  { task: "ML practice/project", scope: "Code refining, documentation tuning, and secondary loops.", durationMins: 90 },
   { task: "Review & revision", scope: "Anki retention cards, look back over code logic, review notes.", durationMins: 60 },
   { task: "Planning + rest", scope: "Tomorrow's agenda strategy, clear dev rigs, screen blackout.", durationMins: 90 }
 ];
 
+const FAMOUS_QUOTES = [
+  { quote: "The only way to do great work is to love what you do.", author: "Steve Jobs" },
+  { quote: "Quality means doing it right when no one is looking.", author: "Henry Ford" },
+  { quote: "The best way to predict the future is to invent it.", author: "Alan Kay" },
+  { quote: "It always seems impossible until it's done.", author: "Nelson Mandela" },
+  { quote: "Arise, awake, and stop not until the goal is reached.", author: "Swami Vivekananda" }
+];
+
 const DailyPage: React.FC<DailyPageProps> = ({ db, setDb }) => {
+  // Modal & Input States
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskInput, setTaskInput] = useState("");
   const [scopeInput, setScopeInput] = useState("");
   const [durationInput, setDurationInput] = useState("60");
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [editingDurationIndex, setEditingDurationIndex] = useState<number | null>(null);
+
+  // Custom Warning Dialog State
+  const [warningConfig, setWarningConfig] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    emoji: string;
+    onConfirm: () => void;
+  }>({ isOpen: false, title: "", message: "", emoji: "⚠️", onConfirm: () => {} });
+
+  // Custom Prompt States
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   const getLocalDateString = (dateObj: Date) => {
     const year = dateObj.getFullYear();
@@ -67,46 +75,60 @@ const DailyPage: React.FC<DailyPageProps> = ({ db, setDb }) => {
     return () => clearInterval(timer);
   }, []);
 
+  const dailyQuote = useMemo(() => {
+    const dayNumeric = currentTime.getDate();
+    return FAMOUS_QUOTES[dayNumeric % FAMOUS_QUOTES.length];
+  }, [currentTime]);
+
   const dailyRecords = db?.daily_records || {};
   const todayRecord = dailyRecords[todayKey] || {
     tasks: DEFAULT_TASKS,
     progress: {},
-    holiday_mode: false
+    holiday_mode: false,
+    waking_time: "07:00",
+    penalty_score: 0
   };
 
   const currentRawTasks: TaskItem[] = todayRecord.tasks || DEFAULT_TASKS;
   const progressClicks = todayRecord.progress || {};
   const isHolidayMode = !!todayRecord.holiday_mode;
+  const currentWakingTime = todayRecord.waking_time || "07:00";
+  const penaltyScore = todayRecord.penalty_score || 0;
 
-  const schedule: DisplayItem[] = currentRawTasks.map((item, idx) => {
-    if (idx < FIXED_TIMELINE_SLOTS.length) {
-      return { ...item, timeLabel: FIXED_TIMELINE_SLOTS[idx] };
-    }
+  // DYNAMIC CASCADING TIMELINE ENGINE
+  const schedule: DisplayItem[] = useMemo(() => {
+    const [wakeHrs, wakeMins] = currentWakingTime.split(":").map(Number);
+    let currentStartMins = (isNaN(wakeHrs) ? 7 : wakeHrs) * 60 + (isNaN(wakeMins) ? 0 : wakeMins);
 
-    let previousEndTime = "23:30";
-    if (idx > 0) {
-      const prevSlot = FIXED_TIMELINE_SLOTS[idx - 1];
-      if (prevSlot && prevSlot.includes("-")) {
-        previousEndTime = prevSlot.split("-")[1].trim();
-      }
-    }
+    return currentRawTasks.map((item) => {
+      const startMins = currentStartMins;
+      const endMins = (startMins + item.durationMins) % 1440;
 
-    const [hrs, mins] = previousEndTime.split(":").map(Number);
-    const startTotalMins = hrs * 60 + mins;
-    const endTotalMins = (startTotalMins + item.durationMins) % 1440;
+      const formatTimeStr = (totalMins: number) => {
+        const h = Math.floor(totalMins / 60).toString().padStart(2, "0");
+        const m = (totalMins % 60).toString().padStart(2, "0");
+        return `${h}:${m}`;
+      };
 
-    const formatTimeStr = (totalMins: number) => {
-      const h = Math.floor(totalMins / 60).toString().padStart(2, "0");
-      const m = (totalMins % 60).toString().padStart(2, "0");
-      return `${h}:${m}`;
-    };
+      const computedLabel = `${formatTimeStr(startMins)} - ${formatTimeStr(endMins)}`;
+      currentStartMins = startMins + item.durationMins;
 
-    return { ...item, timeLabel: `${previousEndTime} - ${formatTimeStr(endTotalMins)}` };
-  });
+      return {
+        ...item,
+        timeLabel: computedLabel
+      };
+    });
+  }, [currentRawTasks, currentWakingTime]);
 
   const totalTasks = schedule.length;
   const completedTasks = Object.values(progressClicks).filter(Boolean).length;
-  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  const completionRate = useMemo(() => {
+    if (totalTasks === 0) return 0;
+    const baseRate = Math.round((completedTasks / totalTasks) * 100);
+    const penalizedRate = baseRate - (penaltyScore * 15);
+    return Math.max(0, penalizedRate);
+  }, [completedTasks, totalTasks, penaltyScore]);
 
   const getTimeOfDayIcon = (timeRangeStr: string): string => {
     const startHour = parseInt(timeRangeStr.split(":")[0], 10);
@@ -117,6 +139,7 @@ const DailyPage: React.FC<DailyPageProps> = ({ db, setDb }) => {
     return "🌌";
   };
 
+  // Triggers the Night Sync Control box between 23:00 and 04:00
   const currentHour = currentTime.getHours();
   const showNightDeck = currentHour >= 23 || currentHour < 4;
 
@@ -133,10 +156,42 @@ const DailyPage: React.FC<DailyPageProps> = ({ db, setDb }) => {
     }));
   };
 
+  const handleWakingTimeChange = (newTime: string) => {
+    updateTodayRecord({ waking_time: newTime });
+  };
+
   const handleToggleTaskInternal = (timeLabel: string) => {
     const updatedProgress = { ...progressClicks };
     updatedProgress[timeLabel] = !updatedProgress[timeLabel];
     updateTodayRecord({ progress: updatedProgress });
+  };
+
+  const checkTimelineOverflow = (tasksToTest: TaskItem[]): boolean => {
+    const [wakeHrs, wakeMins] = currentWakingTime.split(":").map(Number);
+    const startMins = (isNaN(wakeHrs) ? 7 : wakeHrs) * 60 + (isNaN(wakeMins) ? 0 : wakeMins);
+    const totalDuration = tasksToTest.reduce((sum, t) => sum + t.durationMins, 0);
+    return (startMins + totalDuration) > 1440;
+  };
+
+  const handleUpdateDuration = (index: number, newMins: number) => {
+    const updatedTasks = [...currentRawTasks];
+    updatedTasks[index] = { ...updatedTasks[index], durationMins: newMins };
+
+    if (checkTimelineOverflow(updatedTasks)) {
+      setWarningConfig({
+        isOpen: true,
+        emoji: "⏳",
+        title: "Timeline Boundary Alert",
+        message: "Modifying this block breaks past the midnight (00:00) barrier. Proceeding adds a systematic penalty to your Consistency Index.",
+        onConfirm: () => {
+          updateTodayRecord({ tasks: updatedTasks, penalty_score: penaltyScore + 1 });
+          setWarningConfig(prev => ({ ...prev, isOpen: false }));
+        }
+      });
+    } else {
+      updateTodayRecord({ tasks: updatedTasks });
+    }
+    setEditingDurationIndex(null);
   };
 
   const handleAddTask = (e: React.FormEvent) => {
@@ -149,20 +204,32 @@ const DailyPage: React.FC<DailyPageProps> = ({ db, setDb }) => {
       durationMins: parseInt(durationInput, 10) || 60
     };
 
-    updateTodayRecord({ tasks: [...currentRawTasks, newRawTask] });
+    const targetTasks = [...currentRawTasks, newRawTask];
+
+    if (checkTimelineOverflow(targetTasks)) {
+      setWarningConfig({
+        isOpen: true,
+        emoji: "🚀",
+        title: "Operational Routine Overflow",
+        message: "Injected task pushes execution past 00:00. This configuration will lower consistency scores to encourage time discipline.",
+        onConfirm: () => {
+          updateTodayRecord({ tasks: targetTasks, penalty_score: penaltyScore + 1 });
+          setWarningConfig(prev => ({ ...prev, isOpen: false }));
+          setIsModalOpen(false);
+        }
+      });
+    } else {
+      updateTodayRecord({ tasks: targetTasks });
+      setIsModalOpen(false);
+    }
 
     setTaskInput("");
     setScopeInput("");
     setDurationInput("60");
-    setIsModalOpen(false);
   };
 
   const handleDeleteTask = (indexToDelete: number) => {
     updateTodayRecord({ tasks: currentRawTasks.filter((_, idx) => idx !== indexToDelete) });
-  };
-
-  const handleResetDay = () => {
-    updateTodayRecord({ progress: {}, holiday_mode: false });
   };
 
   const getTomorrowKey = () => {
@@ -177,10 +244,9 @@ const DailyPage: React.FC<DailyPageProps> = ({ db, setDb }) => {
       ...prev,
       daily_records: {
         ...(prev?.daily_records || {}),
-        [tomorrowKey]: { tasks: DEFAULT_TASKS, progress: {}, holiday_mode: false }
+        [tomorrowKey]: { tasks: currentRawTasks, progress: {}, holiday_mode: false, waking_time: currentWakingTime, penalty_score: 0 }
       }
     }));
-    alert("Tomorrow's sequence has been compiled based on your template!");
   };
 
   const handleClearDayHolidayTomorrow = () => {
@@ -189,10 +255,9 @@ const DailyPage: React.FC<DailyPageProps> = ({ db, setDb }) => {
       ...prev,
       daily_records: {
         ...(prev?.daily_records || {}),
-        [tomorrowKey]: { tasks: [], progress: {}, holiday_mode: true }
+        [tomorrowKey]: { tasks: [], progress: {}, holiday_mode: true, penalty_score: 0 }
       }
     }));
-    alert("Tomorrow set to Holiday Mode. Rest sequence logged!");
   };
 
   const handleDragStart = (index: number) => setDraggedIndex(index);
@@ -210,186 +275,239 @@ const DailyPage: React.FC<DailyPageProps> = ({ db, setDb }) => {
   };
 
   return (
-    <div className="dashboard-container page-fade-in" style={{ maxWidth: "1140px", paddingBottom: "140px" }}>
+    <div className="w-full max-w-[1480px] mx-auto p-5 md:p-8 flex flex-col box-border pb-20 select-none page-fade-in bg-transparent" style={{ color: "var(--text-main)" }}>
+
+      {/* FLOATING BOXLESS HIGHLIGHTED QUOTE */}
+      <div className="w-full mb-6 text-center border-b border-dashed pb-3" style={{ borderColor: "var(--border-subtle)" }}>
+        <span className="text-sm md:text-base font-semibold tracking-wide italic" style={{ color: "var(--text-main)" }}>
+          "{dailyQuote.quote}"
+        </span>
+        <span className="text-xs font-bold font-mono tracking-wider uppercase ml-3" style={{ color: "var(--accent-color)" }}>
+          — {dailyQuote.author}
+        </span>
+      </div>
 
       {/* Header Deck */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", width: "100%", marginBottom: "28px" }}>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full mb-4">
         <div>
-          <h2 style={{ fontSize: "28px", fontWeight: 900, margin: "0 0 8px 0", color: "#ffffff", letterSpacing: "-0.8px" }}>
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight m-0 uppercase" style={{ fontFamily: "var(--font-display)" }}>
             Daily Routine Execution
           </h2>
-          <p style={{ fontSize: "14.5px", color: "rgba(255,255,255,0.4)", margin: 0 }}>
-            Unit Segment ID: <span style={{ color: "#4f8cff", fontWeight: 700, marginRight: "16px" }}>{todayKey}</span>
-            Hardware Clock: <span style={{ color: "rgba(255,255,255,0.65)" }}>{currentTime.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
-          </p>
+          <div className="m-0 mt-2 text-xs font-mono tracking-wider flex flex-wrap items-center gap-x-5 gap-y-2" style={{ color: "var(--text-muted)" }}>
+            <span>Unit ID: <strong style={{ color: "var(--secondary-accent)" }}>{todayKey}</strong></span>
+
+            <span className="flex items-center gap-1.5 font-bold">
+              Clock:
+              <span className="px-2 py-0.5 rounded text-xs font-black" style={{ backgroundColor: "var(--pill-bg)", color: "var(--text-main)", border: "1px solid var(--border-glass)" }}>
+                {currentTime.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+            </span>
+
+            <span className="flex items-center gap-1.5 font-bold">
+              ☀️ Wake Time:
+              <input
+                type="time"
+                value={currentWakingTime}
+                onChange={(e) => handleWakingTimeChange(e.target.value)}
+                className="px-1.5 py-0.5 rounded text-xs font-bold font-mono border focus:outline-none"
+                style={{ backgroundColor: "var(--pill-bg)", color: "var(--text-main)", borderColor: "var(--border-subtle)" }}
+              />
+            </span>
+
+            {penaltyScore > 0 && (
+              <span className="font-bold text-xs px-2 py-0.5 rounded border animate-pulse" style={{ borderColor: "rgba(239, 68, 68, 1)", color: "rgba(239, 68, 68, 1)", backgroundColor: "rgba(239, 68, 68, 0.05)" }}>
+                🚨 BOUNDARY OVERFLOWS: {penaltyScore}
+              </span>
+            )}
+          </div>
         </div>
 
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: "11px", textTransform: "uppercase", color: "rgba(255,255,255,0.3)", fontWeight: 800, letterSpacing: "1px" }}>
-            Efficiency Index
+        <div className="flex items-center gap-4 self-end sm:self-auto text-right">
+          <div>
+            <div className="text-[10px] font-mono uppercase tracking-widest opacity-80" style={{ color: "var(--text-muted)" }}>
+              Efficiency Index
+            </div>
+            <div className="text-2xl font-bold font-mono tracking-tighter transition-all" style={{ color: completionRate >= 80 || isHolidayMode ? "var(--secondary-accent)" : "var(--accent-color)" }}>
+              {isHolidayMode ? "100%" : `${completionRate}%`}
+            </div>
           </div>
-          <div style={{ fontSize: "40px", fontWeight: 950, color: isHolidayMode ? "#1dd1a1" : (completionRate === 100 ? "#1dd1a1" : "#4f8cff"), lineHeight: 1, letterSpacing: "-1px" }}>
-            {isHolidayMode ? "100%" : `${completionRate}%`}
-          </div>
+          <button
+            onClick={() => setIsResetModalOpen(true)}
+            className="font-mono text-[10px] px-3 py-1.5 rounded-lg border cursor-pointer transition-all duration-200"
+            style={{
+              backgroundColor: "var(--pill-bg)",
+              borderColor: "var(--border-subtle)",
+              color: "var(--text-main)"
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "var(--card-bg-hover)"}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "var(--pill-bg)"}
+          >
+            🔄 Reset Vector
+          </button>
         </div>
       </div>
 
-      {/* High Fidelity Progress Metric Line */}
-      <div style={{ width: "100%", height: "8px", background: "#13131a", borderRadius: "4px", overflow: "hidden", marginBottom: "36px", boxShadow: "inset 0 1px 3px rgba(0,0,0,0.5)" }}>
-        <div style={{
-          width: isHolidayMode ? "100%" : `${completionRate}%`, height: "100%",
-          background: isHolidayMode || completionRate === 100 ? "linear-gradient(90deg, #1dd1a1, #10ac84)" : "linear-gradient(90deg, #3b82f6, #1d4ed8)",
-          transition: "width 0.6s cubic-bezier(0.22, 1, 0.36, 1)",
-          boxShadow: isHolidayMode || completionRate === 100 ? "0 0 12px #1dd1a1" : "0 0 12px #3b82f6"
-        }} />
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "flex-end", width: "100%", marginBottom: "28px" }}>
-        <button
-          onClick={handleResetDay}
+      {/* Dynamic Telemetry System Bar */}
+      <div className="telemetry-bar-bg mb-6">
+        <div
+          className="telemetry-fill"
           style={{
-            background: "#181013", border: "1px solid #4c1d23", color: "#f43f5e",
-            padding: "12px 26px", borderRadius: "10px", fontSize: "13px", fontWeight: 700, cursor: "pointer",
-            transition: "all 0.2s ease", boxShadow: "0 4px 14px rgba(244, 63, 94, 0.08)"
+            width: isHolidayMode ? "100%" : `${completionRate}%`,
+            background: `linear-gradient(90deg, var(--accent-color) 0%, var(--secondary-accent) 100%)`
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "#221318"; e.currentTarget.style.boxShadow = "0 0 20px rgba(244, 63, 94, 0.15)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "#181013"; e.currentTarget.style.boxShadow = "0 4px 14px rgba(244, 63, 94, 0.08)"; }}
-        >
-          🔄 Reset Today's Checks
-        </button>
+        />
       </div>
 
-      {/* TIMELINE GRID CONTAINER */}
+      {/* 2-COLUMN BALANCED SYSTEM ROUTINE CARDS */}
       {isHolidayMode ? (
-        <div style={{ padding: "90px 20px", textAlign: "center", background: "#0b0b11", borderRadius: "20px", border: "1px dashed rgba(29, 209, 161, 0.25)", boxShadow: "0 0 40px rgba(29, 209, 161, 0.03)" }}>
-          <span style={{ fontSize: "54px" }}>🏖️</span>
-          <h3 style={{ color: "#1dd1a1", marginTop: "20px", fontSize: "24px", fontWeight: 800, letterSpacing: "-0.5px" }}>Holiday Mode Active</h3>
-          <p style={{ color: "rgba(255,255,255,0.35)", margin: "8px 0 0 0", fontSize: "15px" }}>Disconnect from operational grids. Enjoy your rest architecture fully.</p>
+        <div className="w-full py-12 text-center rounded-xl border-2 border-dashed" style={{ backgroundColor: "var(--bg-glass)", borderColor: "var(--border-subtle)" }}>
+          <span className="text-3xl">🏖️</span>
+          <h3 className="mt-3 text-base font-bold uppercase tracking-tight" style={{ color: "var(--secondary-accent)" }}>Holiday Mode Active</h3>
         </div>
       ) : (
-        <div className="timeline-container" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-3.5">
           {schedule.map((item, index) => {
             const isDone = !!progressClicks[item.timeLabel];
-            const isHovered = hoveredIndex === index;
-
-            // Centered Ambient Shadow Engine Math
-            let cardBoxShadow = "0 8px 30px rgba(0, 0, 0, 0.3)";
-            if (isDone) {
-              cardBoxShadow = isHovered ? "0 0 35px rgba(29, 209, 161, 0.25)" : "0 0 22px rgba(29, 209, 161, 0.12)";
-            } else if (isHovered) {
-              cardBoxShadow = "0 0 35px rgba(59, 130, 246, 0.25)";
-            }
-
             return (
               <div
                 key={`${item.timeLabel}-${index}`}
-                className={`timeline-row ${isDone ? "is-completed" : ""}`}
                 onClick={() => handleToggleTaskInternal(item.timeLabel)}
                 draggable
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={(e) => handleDragOver(e, index)}
                 onDrop={() => handleDrop(index)}
-                onMouseEnter={() => setHoveredIndex(index)}
-                onMouseLeave={() => setHoveredIndex(null)}
+                className="group rounded-xl border p-4 cursor-grab select-none transition-all duration-200 flex items-center justify-between min-h-[70px] relative overflow-hidden"
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  background: isDone ? "linear-gradient(135deg, #05140e 0%, #020806 100%)" : "#0a0a10",
-                  border: isDone ? "1px solid rgba(29, 209, 161, 0.25)" : "1px solid #161622",
-                  borderLeft: isDone ? "6px solid #1dd1a1" : "6px solid #3b82f6",
-                  borderRadius: "16px",
-                  padding: "32px 40px", // ⚡ Significantly wider and more elongated layout parameters
-                  cursor: "grab",
-                  opacity: draggedIndex === index ? 0.35 : 1,
-                  boxShadow: cardBoxShadow, // 🔥 High premium centralized light source box shadows
-                  transform: isHovered && draggedIndex === null ? "translateY(-3px) scale(1.006)" : "translateY(0) scale(1)",
-                  transition: "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)" // 🔥 Responsive fluid structural ease settings
+                  backgroundColor: "var(--bg-glass)",
+                  borderColor: isDone ? "var(--accent-color)" : "var(--border-glass)",
+                  boxShadow: "var(--shadow-premium)",
+                  opacity: draggedIndex === index ? 0.35 : (isDone ? 0.65 : 1),
+                  borderLeftWidth: "4px",
+                  borderLeftColor: isDone ? "var(--accent-color)" : "var(--secondary-accent)"
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: "28px", width: "90%" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "16px" }} onClick={(e) => e.stopPropagation()}>
-                    <span style={{ color: "rgba(255,255,255,0.1)", fontSize: "20px", cursor: "grab" }}>☰</span>
+                <div className="flex items-center gap-3.5 w-[92%] overflow-hidden">
+
+                  {/* Sorting & Deletion Controls */}
+                  <div className="flex items-center gap-2 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <span className="font-bold text-sm cursor-grab opacity-40 hover:opacity-100" style={{ color: "var(--text-main)" }}>☰</span>
                     <button
                       onClick={() => handleDeleteTask(index)}
-                      style={{ background: "transparent", border: "none", color: "rgba(239,68,68,0.3)", cursor: "pointer", fontSize: "16px", transition: "color 0.2s" }}
-                      onMouseEnter={(e) => e.currentTarget.style.color = "rgba(239,68,68,0.9)"}
-                      onMouseLeave={(e) => e.currentTarget.style.color = "rgba(239,68,68,0.3)"}
+                      className="bg-transparent border-none opacity-40 hover:opacity-100 transition-opacity cursor-pointer text-xs"
+                      style={{ color: "var(--text-main)" }}
+                      title="Delete task (Allows penalty-free replacement tracking)"
                     >
                       🗑️
                     </button>
                   </div>
 
-                  <span style={{ fontSize: "28px", transition: "transform 0.3s ease", transform: isHovered ? "scale(1.12)" : "scale(1)", filter: isDone ? "grayscale(95%) opacity(0.35)" : "none" }}>
+                  {/* Time Icon */}
+                  <span className="text-base flex-shrink-0 hidden sm:block">
                     {getTimeOfDayIcon(item.timeLabel)}
                   </span>
 
-                  <div style={{ minWidth: "150px", fontSize: "15.5px", fontWeight: 800, fontFamily: "monospace", color: isDone ? "#10ac84" : "#3b82f6", letterSpacing: "0.6px" }}>
-                    {item.timeLabel}
+                  {/* TIME MATRIX INLINE DURATION CONTROLLER */}
+                  <div
+                    className="text-xs font-bold font-mono tracking-wide flex-shrink-0 min-w-[95px] cursor-pointer hover:underline decoration-dotted relative"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingDurationIndex(editingDurationIndex === index ? null : index);
+                    }}
+                    title="Click to tweak block length"
+                  >
+                    {editingDurationIndex === index ? (
+                      <select
+                        value={item.durationMins}
+                        onChange={(selectEvent) => handleUpdateDuration(index, parseInt(selectEvent.target.value, 10))}
+                        onClick={(selectEvent) => selectEvent.stopPropagation()}
+                        className="text-[11px] font-mono rounded border p-1 focus:outline-none"
+                        style={{ backgroundColor: "var(--bg-fallback)", color: "var(--text-main)", borderColor: "var(--border-subtle)" }}
+                      >
+                        <option value={15}>15m</option>
+                        <option value={30}>30m</option>
+                        <option value={45}>45m</option>
+                        <option value={60}>1h 00m</option>
+                        <option value={75}>1h 15m</option>
+                        <option value={90}>1h 30m</option>
+                        <option value={120}>2h 00m</option>
+                        <option value={150}>2h 30m</option>
+                        <option value={180}>3h 00m</option>
+                        <option value={240}>4h 00m</option>
+                        <option value={300}>5h 00m</option>
+                      </select>
+                    ) : (
+                      <span>⏰ {item.timeLabel}</span>
+                    )}
                   </div>
 
-                  <div style={{ display: "flex", flexDirection: "column", overflow: "hidden" }}>
-                    <h4 style={{ margin: 0, fontSize: "18px", fontWeight: 700, color: isDone ? "rgba(255,255,255,0.6)" : "#ffffff", letterSpacing: "-0.3px", textDecoration: isDone ? "line-through" : "none", transition: "all 0.2s" }}>
+                  {/* Text Information Elements */}
+                  <div className="flex flex-col min-w-0 flex-1 pr-1">
+                    <h4 className="m-0 text-sm font-bold tracking-tight truncate transition-all"
+                        style={{
+                          color: "var(--text-main)",
+                          textDecoration: isDone ? "line-through" : "none",
+                          opacity: isDone ? 0.5 : 1
+                        }}>
                       {item.task}
                     </h4>
-                    <p style={{ margin: "8px 0 0 0", fontSize: "14px", color: isDone ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.4)", lineHeight: "1.5" }}>
-                      {item.scope}
+                    <p className="m-0 text-[11px] font-sans truncate mt-0.5 transition-all"
+                       style={{
+                         color: "var(--text-muted)",
+                         textDecoration: isDone ? "line-through" : "none",
+                         opacity: isDone ? 0.4 : 0.95
+                       }}>
+                      {item.scope} <span className="text-[10px] opacity-60 font-mono">({item.durationMins}m)</span>
                     </p>
                   </div>
                 </div>
 
-                <div onClick={(e) => e.stopPropagation()}>
+                {/* Status Switch Interactive Box */}
+                <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
                   <div
                     onClick={() => handleToggleTaskInternal(item.timeLabel)}
+                    className="w-5.5 h-5.5 rounded-md border flex items-center justify-center transition-all duration-200 font-mono text-[9px] font-black cursor-pointer"
                     style={{
-                      cursor: "pointer", width: "28px", height: "28px", borderRadius: "8px",
-                      border: isDone ? "1px solid #1dd1a1" : "1px solid rgba(255,255,255,0.12)",
-                      background: isDone ? "rgba(29, 209, 161, 0.15)" : "rgba(0,0,0,0.4)",
-                      display: "flex", alignItems: "center", justifyContent: "center", color: isDone ? "#1dd1a1" : "transparent",
-                      fontWeight: 900, fontSize: "14px", transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-                      transform: isHovered ? "scale(1.08)" : "scale(1)"
+                      backgroundColor: isDone ? "var(--accent-color)" : "transparent",
+                      borderColor: isDone ? "var(--accent-color)" : "var(--border-subtle)",
+                      color: isDone ? "var(--bg-fallback)" : "transparent"
                     }}
                   >
                     ✓
                   </div>
                 </div>
+
               </div>
             );
           })}
         </div>
       )}
 
-      {/* ➕ CUSTOM TASK INJECTION LAYER */}
+      {/* INJECT DYNAMIC BLOCK BUTTON */}
       {!isHolidayMode && (
-        <div style={{ width: "100%", display: "flex", justifyContent: "center", marginTop: "40px" }}>
+        <div className="w-full flex justify-center mt-5">
           <button
             onClick={() => setIsModalOpen(true)}
+            className="w-full border border-dashed font-bold text-xs font-mono py-3 rounded-xl cursor-pointer transition-all duration-300 shadow-sm"
             style={{
-              width: "100%", background: "#0b1326", border: "1px dashed #1d3566", color: "#3b82f6",
-              padding: "20px", borderRadius: "16px", fontSize: "14px", fontWeight: 700, cursor: "pointer",
-              transition: "all 0.3s", boxShadow: "0 4px 20px rgba(0,0,0,0.2)"
+              backgroundColor: "var(--bg-glass)",
+              borderColor: "var(--border-subtle)",
+              color: "var(--secondary-accent)"
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "#0f1b35"; e.currentTarget.style.borderColor = "#3b82f6"; e.currentTarget.style.boxShadow = "0 0 25px rgba(59,130,246,0.15)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "#0b1326"; e.currentTarget.style.borderColor = "#1d3566"; e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.2)"; }}
+            onMouseEnter={(e) => e.currentTarget.style.borderColor = "var(--secondary-accent)"}
+            onMouseLeave={(e) => e.currentTarget.style.borderColor = "var(--border-subtle)"}
           >
-            ➕ Inject Custom Task Block
+            ▲ Inject Custom Task Block
           </button>
         </div>
       )}
 
-      {/* 🌌 CONSOLE CONTROL NIGHT STRATEGY FRAME */}
+      {/* NIGHT SYNC STRATEGY FRAMES DEPLOYMENT BOARD (Triggers automatically at 23:00) */}
       {showNightDeck && (
-        <div style={{
-          marginTop: "54px", padding: "32px", background: "#06060a",
-          border: "1px solid #13131f", borderRadius: "20px", boxShadow: "0 15px 50px rgba(0,0,0,0.6)"
-        }}>
-          <h3 style={{ color: "#ffffff", fontSize: "18px", fontWeight: 800, margin: "0 0 6px 0", letterSpacing: "-0.4px" }}>
+        <div className="mt-6 p-4 rounded-xl border shadow-lg animate-fade-in" style={{ backgroundColor: "var(--bg-glass)", borderColor: "var(--border-glass)" }}>
+          <h3 className="text-sm font-bold font-mono uppercase tracking-tight mb-3" style={{ color: "var(--text-main)" }}>
             🌙 Night Sync Strategy Frame
           </h3>
-          <p style={{ color: "rgba(255,255,255,0.35)", fontSize: "14px", margin: "0 0 26px 0" }}>
-            Late hour detection event confirmed. Initialize parameters for tomorrow's template sequence:
-          </p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "16px" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
             <button
               onClick={() => {
                 const tomorrowKey = getTomorrowKey();
@@ -397,67 +515,178 @@ const DailyPage: React.FC<DailyPageProps> = ({ db, setDb }) => {
                   ...prev,
                   daily_records: {
                     ...(prev?.daily_records || {}),
-                    [tomorrowKey]: { tasks: currentRawTasks, progress: {}, holiday_mode: false }
+                    [tomorrowKey]: { tasks: currentRawTasks, progress: {}, holiday_mode: false, waking_time: currentWakingTime, penalty_score: 0 }
                   }
                 }));
                 setIsModalOpen(true);
               }}
-              style={{ background: "#0f172a", border: "1px solid #1e293b", color: "#38bdf8", padding: "18px", borderRadius: "12px", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}
-              onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 0 20px rgba(56,189,248,0.2)"}
-              onMouseLeave={(e) => e.currentTarget.style.boxShadow = "none"}
+              className="border font-bold text-xs font-mono py-2 rounded-lg cursor-pointer transition-colors"
+              style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }}
             >
-              📝 Plan Your Next Day
+              📝 Plan Tomorrow
             </button>
             <button
-              onClick={handleSetSameRoutineTomorrow}
-              style={{ background: "#061512", border: "1px solid #0f2d24", color: "#4ade80", padding: "18px", borderRadius: "12px", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}
-              onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 0 20px rgba(74,222,128,0.15)"}
-              onMouseLeave={(e) => e.currentTarget.style.boxShadow = "none"}
+              onClick={() => {
+                handleSetSameRoutineTomorrow();
+                alert("Tomorrow's sequence duplicated seamlessly.");
+              }}
+              className="border font-bold text-xs font-mono py-2 rounded-lg cursor-pointer transition-colors"
+              style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--secondary-accent)" }}
             >
-              🔄 Run Same Routine
+              🔄 Repeat Routine
             </button>
             <button
-              onClick={handleClearDayHolidayTomorrow}
-              style={{ background: "#1c0d10", border: "1px solid #3b141a", color: "#f87171", padding: "18px", borderRadius: "12px", fontSize: "13.5px", fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}
-              onMouseEnter={(e) => e.currentTarget.style.boxShadow = "0 0 20px rgba(248,113,113,0.15)"}
-              onMouseLeave={(e) => e.currentTarget.style.boxShadow = "none"}
+              onClick={() => {
+                handleClearDayHolidayTomorrow();
+                alert("Tomorrow set to Holiday Mode.");
+              }}
+              className="border font-bold text-xs font-mono py-2 rounded-lg cursor-pointer transition-colors"
+              style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--accent-color)" }}
             >
-              🏖️ Clear My Day (Holiday)
+              🏖️ Set Holiday
             </button>
           </div>
         </div>
       )}
 
-      {/* ENTRY LAYOUT INTERFACING MODAL */}
+      {/* ================= MODALS & DIALOGS SECTION ================= */}
+
+      {/* PREMIUM HIGH-ATTRACTION OVERFLOW WARNING DIALOG BOX */}
+      {warningConfig.isOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-[100] p-4 animate-fade-in">
+          <div
+            className="border w-full max-w-[420px] p-6 shadow-2xl rounded-2xl text-center transform transition-all scale-100"
+            style={{ backgroundColor: "var(--bg-fallback)", borderColor: "rgba(239, 68, 68, 0.4)", color: "var(--text-main)" }}
+          >
+            <div className="text-5xl mb-3 animate-bounce">{warningConfig.emoji}</div>
+            <h3 className="text-base font-bold font-mono uppercase tracking-wider text-red-500 mb-2">
+              {warningConfig.title}
+            </h3>
+            <p className="text-xs font-sans leading-relaxed opacity-90 mb-5" style={{ color: "var(--text-muted)" }}>
+              {warningConfig.message}
+            </p>
+            <div className="flex justify-center gap-3">
+              <button
+                className="text-xs font-mono font-bold px-4 py-2 rounded-xl border transition-colors"
+                style={{ backgroundColor: "transparent", borderColor: "var(--border-subtle)", color: "var(--text-main)" }}
+                onClick={() => setWarningConfig(prev => ({ ...prev, isOpen: false }))}
+              >
+                Cancel Vector
+              </button>
+              <button
+                className="text-white text-xs font-mono font-bold px-5 py-2 rounded-xl border shadow-md transition-opacity bg-red-600 border-red-600 hover:opacity-90"
+                onClick={warningConfig.onConfirm}
+              >
+                Accept Penalty & Inject
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ATTRACTIVE SYSTEM VECTOR RESET MODAL */}
+      {isResetModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setIsResetModalOpen(false)}>
+          <div
+            className="border w-full max-w-[400px] p-5 shadow-2xl rounded-xl text-center"
+            style={{ backgroundColor: "var(--bg-fallback)", borderColor: "var(--border-glass)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-4xl mb-2">🔄</div>
+            <h3 className="text-sm font-bold font-mono uppercase tracking-tight mb-2">Reset Routine Core</h3>
+            <p className="text-xs opacity-80 mb-4" style={{ color: "var(--text-muted)" }}>Choose a reconfiguration state framework:</p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  updateTodayRecord({ tasks: DEFAULT_TASKS, progress: {}, holiday_mode: false, waking_time: "07:00", penalty_score: 0 });
+                  setIsResetModalOpen(false);
+                }}
+                className="text-xs font-mono font-bold py-2.5 rounded-lg border w-full transition-all"
+                style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--secondary-accent)" }}
+              >
+                ⚡ Restore Pristine Defaults
+              </button>
+              <button
+                onClick={() => {
+                  updateTodayRecord({ tasks: [], progress: {}, holiday_mode: false, waking_time: "07:00", penalty_score: 0 });
+                  setIsResetModalOpen(false);
+                }}
+                className="text-xs font-mono font-bold py-2.5 rounded-lg border w-full transition-all"
+                style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "rgba(239, 68, 68, 1)" }}
+              >
+                🗑️ Clean Slate Wipe
+              </button>
+              <button
+                onClick={() => setIsResetModalOpen(false)}
+                className="text-xs font-mono font-bold py-2 rounded-lg border w-full mt-2"
+                style={{ backgroundColor: "transparent", borderColor: "var(--border-subtle)", color: "var(--text-muted)" }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* INPUT SYSTEM MODAL BLOCK */}
       {isModalOpen && (
-        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ boxShadow: "0 20px 60px rgba(0,0,0,0.7)", border: "1px solid #1c1c28", borderRadius: "20px" }}>
-            <h3 style={{ fontSize: "19px", margin: "0 0 24px 0", fontWeight: 800, color: "#ffffff", letterSpacing: "-0.4px" }}>Inject Operational Frame</h3>
-            <form onSubmit={handleAddTask}>
-              <div className="form-group">
-                <label>Operational Assignment Title</label>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setIsModalOpen(false)}>
+          <div
+            className="border w-full max-w-[440px] p-5 shadow-2xl rounded-xl"
+            style={{ backgroundColor: "var(--bg-fallback)", borderColor: "var(--border-glass)", color: "var(--text-main)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-sm font-bold font-mono uppercase tracking-tight mb-3">Inject Operational Frame</h3>
+            <form onSubmit={handleAddTask} className="flex flex-col gap-3.5">
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold font-mono uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Assignment Title</label>
                 <input
-                  type="text" className="form-input" placeholder="e.g., Deep Learning Architecture Sprint"
-                  value={taskInput} onChange={(e) => setTaskInput(e.target.value)} required autoFocus
+                  type="text"
+                  className="border rounded-lg p-2.5 text-xs focus:outline-none"
+                  style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }}
+                  value={taskInput}
+                  onChange={(e) => setTaskInput(e.target.value)}
+                  required
+                  autoFocus
                 />
               </div>
-              <div className="form-group">
-                <label>Execution Parameters / Target Scope</label>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold font-mono uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Target Scope</label>
                 <input
-                  type="text" className="form-input" placeholder="e.g., Focus on vision transformer heads."
-                  value={scopeInput} onChange={(e) => setScopeInput(e.target.value)}
+                  type="text"
+                  className="border rounded-lg p-2.5 text-xs focus:outline-none"
+                  style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }}
+                  value={scopeInput}
+                  onChange={(e) => setScopeInput(e.target.value)}
                 />
               </div>
-              <div className="form-group">
-                <label>Time Duration Allocation (Minutes)</label>
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-bold font-mono uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>Duration (Minutes)</label>
                 <input
-                  type="number" className="form-input" placeholder="60"
-                  value={durationInput} onChange={(e) => setDurationInput(e.target.value)} required
+                  type="number"
+                  className="border rounded-lg p-2.5 text-xs focus:outline-none font-mono"
+                  style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }}
+                  value={durationInput}
+                  onChange={(e) => setDurationInput(e.target.value)}
+                  required
                 />
               </div>
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "14px", marginTop: "32px" }}>
-                <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Inject Block</button>
+              <div className="flex justify-end gap-2 mt-2">
+                <button
+                  type="button"
+                  className="text-xs font-mono font-bold px-3 py-1.5 rounded-lg border"
+                  style={{ backgroundColor: "transparent", borderColor: "var(--border-subtle)", color: "var(--text-muted)" }}
+                  onClick={() => setIsModalOpen(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="text-white text-xs font-mono font-bold px-4 py-1.5 rounded-lg border shadow-sm transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: "var(--accent-color)", borderColor: "var(--accent-color)" }}
+                >
+                  Inject
+                </button>
               </div>
             </form>
           </div>

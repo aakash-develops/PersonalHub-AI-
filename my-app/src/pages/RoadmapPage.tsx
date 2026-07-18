@@ -1,6 +1,4 @@
-// src/pages/RoadmapPage.tsx
 import React, { useState } from "react";
-import "../App.css";
 
 interface SubtopicGrid {
   id: string;
@@ -27,11 +25,37 @@ interface RoadmapPageProps {
   setDb: React.Dispatch<React.SetStateAction<any>>;
 }
 
-const INITIAL_TAXONOMY_MAP: RoadmapRow[] = [
+const LOGICAL_ORDERED_TAXONOMY: RoadmapRow[] = [
   {
     id: "row-1",
-    title: "Software Systems & Data Engineering",
-    timeline: "Weeks 1-2 • Tier 1 Priority",
+    title: "1. Mathematical Foundations & Optimization",
+    timeline: "Week 1 • Essential Core Dependency",
+    color: "#a855f7",
+    grids: [
+      {
+        id: "grid-2-1",
+        title: "Linear Vector Algebra",
+        contents: "Coordinate transformations, coordinate space reflections, factorization layers.",
+        coreStudies: "Matrix vector multiplication coordinates, transposes, dot directional bounds, Eigenvalues, Eigenvectors, and Singular Value Decomposition (SVD).",
+        durationMinutes: 120,
+        remarks: "",
+        isCompleted: false
+      },
+      {
+        id: "grid-2-2",
+        title: "Differential Calculus & Optimization",
+        contents: "Multi-variable rate change functions, error surface minimization setups.",
+        coreStudies: "Partial derivatives derivation, calculus chain rule application, Jacobian/Hessian trajectory calculation, and coding Gradient Descent entirely from scratch.",
+        durationMinutes: 90,
+        remarks: "",
+        isCompleted: false
+      }
+    ]
+  },
+  {
+    id: "row-2",
+    title: "2. Software Systems & Data Engineering",
+    timeline: "Weeks 2-3 • Tier 1 Execution Pipeline",
     color: "#3b82f6",
     grids: [
       {
@@ -64,35 +88,9 @@ const INITIAL_TAXONOMY_MAP: RoadmapRow[] = [
     ]
   },
   {
-    id: "row-2",
-    title: "Mathematical Foundations & Optimization",
-    timeline: "Week 3 • Core Dependency",
-    color: "#a855f7",
-    grids: [
-      {
-        id: "grid-2-1",
-        title: "Linear Vector Algebra",
-        contents: "Coordinate transformations, coordinate space reflections, factorization layers.",
-        coreStudies: "Matrix vector multiplication coordinates, transposes, dot directional bounds, Eigenvalues, Eigenvectors, and Singular Value Decomposition (SVD).",
-        durationMinutes: 120,
-        remarks: "",
-        isCompleted: false
-      },
-      {
-        id: "grid-2-2",
-        title: "Differential Calculus & Optimization",
-        contents: "Multi-variable rate change functions, error surface minimization setups.",
-        coreStudies: "Partial derivatives derivation, calculus chain rule application, Jacobian/Hessian trajectory calculation, and coding Gradient Descent entirely from scratch.",
-        durationMinutes: 90,
-        remarks: "",
-        isCompleted: false
-      }
-    ]
-  },
-  {
     id: "row-3",
-    title: "Predictive Model Engineering",
-    timeline: "Weeks 4-6 • Model Training",
+    title: "3. Predictive Model Engineering",
+    timeline: "Weeks 4-6 • Model Training & Training Frameworks",
     color: "#06b6d4",
     grids: [
       {
@@ -126,8 +124,8 @@ const INITIAL_TAXONOMY_MAP: RoadmapRow[] = [
   },
   {
     id: "row-4",
-    title: "Validation & MLOps Ingestion",
-    timeline: "Weeks 7-8 • Pipeline Deployment",
+    title: "4. Validation & MLOps Ingestion",
+    timeline: "Weeks 7-8 • Pipeline Deployment & Production",
     color: "#10b981",
     grids: [
       {
@@ -153,15 +151,20 @@ const INITIAL_TAXONOMY_MAP: RoadmapRow[] = [
 ];
 
 const RoadmapPage: React.FC<RoadmapPageProps> = ({ db, setDb }) => {
-  const currentRows: RoadmapRow[] = db?.ml_roadmap_matrix || INITIAL_TAXONOMY_MAP;
+  const currentRows: RoadmapRow[] = db?.modules_data?.ml_roadmap_matrix || LOGICAL_ORDERED_TAXONOMY;
 
-  // Active UI Workspace Anchors
+  const [dailyTargetHours, setDailyTargetHours] = useState<number>(
+    db?.modules_data?.velocity_config?.daily_target_hours || 2.5
+  );
+
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
   const [activeGrid, setActiveGrid] = useState<SubtopicGrid | null>(null);
   const [hoveredGridId, setHoveredGridId] = useState<string | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isSyllabusOpen, setIsSyllabusOpen] = useState(false); // Syllabus Dropdown State
 
-  // Configuration Hub Inputs
+  const [scratchpadTab, setScratchpadTab] = useState<"write" | "preview">("write");
+
   const [newRowTitle, setNewRowTitle] = useState("");
   const [newRowTimeline, setNewRowTimeline] = useState("");
   const [newRowColor, setNewRowColor] = useState("#3b82f6");
@@ -172,14 +175,77 @@ const RoadmapPage: React.FC<RoadmapPageProps> = ({ db, setDb }) => {
   const [newGridStudies, setNewGridStudies] = useState("");
   const [newGridDuration, setNewGridDuration] = useState<number>(60);
 
-  // Global Study Target Configurations (Based on Daily Split Planning Metrics)
-  const DAILY_STUDY_TARGET_HOURS = 2.5;
-
-  const saveRoadmapToDb = (updatedMatrix: RoadmapRow[]) => {
+  const saveRoadmapToDb = (updatedMatrix: RoadmapRow[], targetHours = dailyTargetHours) => {
     setDb((prev: any) => ({
       ...prev,
-      ml_roadmap_matrix: updatedMatrix
+      modules_data: {
+        ...(prev?.modules_data || {}),
+        ml_roadmap_matrix: updatedMatrix,
+        velocity_config: { daily_target_hours: targetHours }
+      }
     }));
+  };
+
+  const handleUpdateHours = (val: number) => {
+    const cleaned = Math.max(0.1, Number(val) || 1);
+    setDailyTargetHours(cleaned);
+    saveRoadmapToDb(currentRows, cleaned);
+  };
+
+  const calculateRowProgress = (row: RoadmapRow) => {
+    if (row.grids.length === 0) return 0;
+    const completedCount = row.grids.filter((g) => g.isCompleted).length;
+    return Math.round((completedCount / row.grids.length) * 100);
+  };
+
+  const isRowUnlocked = (rowIndex: number): boolean => {
+    if (rowIndex === 0) return true;
+    const stepPrerequisiteRow = currentRows[rowIndex - 1];
+    return calculateRowProgress(stepPrerequisiteRow) === 100;
+  };
+
+  const calculateGlobalPageProgress = () => {
+    let totalGrids = 0;
+    let completedGrids = 0;
+    currentRows.forEach((r) => {
+      totalGrids += r.grids.length;
+      completedGrids += r.grids.filter((g) => g.isCompleted).length;
+    });
+    return {
+      percent: totalGrids === 0 ? 0 : Math.round((completedGrids / totalGrids) * 100),
+      totalGrids,
+      completedGrids
+    };
+  };
+
+  const calculateTotalRemainingTime = () => {
+    let aggregateMinutesRemaining = 0;
+    currentRows.forEach((row) => {
+      row.grids.forEach((grid) => {
+        if (!grid.isCompleted) {
+          aggregateMinutesRemaining += grid.durationMinutes || 0;
+        }
+      });
+    });
+    const hoursRemaining = aggregateMinutesRemaining / 60;
+    const daysRemaining = hoursRemaining / dailyTargetHours;
+    return {
+      hoursRemaining: hoursRemaining.toFixed(1),
+      daysRemaining: daysRemaining.toFixed(1)
+    };
+  };
+
+  const calculateRowHourMetrics = (row: RoadmapRow) => {
+    let studiedMinutes = 0;
+    let leftMinutes = 0;
+    row.grids.forEach((g) => {
+      if (g.isCompleted) studiedMinutes += g.durationMinutes || 0;
+      else leftMinutes += g.durationMinutes || 0;
+    });
+    return {
+      studiedHours: (studiedMinutes / 60).toFixed(1),
+      leftHours: (leftMinutes / 60).toFixed(1)
+    };
   };
 
   const handleOpenGridWorkspace = (rowId: string, gridItem: SubtopicGrid) => {
@@ -199,6 +265,7 @@ const RoadmapPage: React.FC<RoadmapPageProps> = ({ db, setDb }) => {
 
     saveRoadmapToDb(updated);
     setActiveRowId(rowId);
+    setScratchpadTab("write");
 
     const activeRowRef = updated.find((r) => r.id === rowId);
     const activeGridRef = activeRowRef?.grids.find((g) => g.id === gridItem.id);
@@ -233,43 +300,6 @@ const RoadmapPage: React.FC<RoadmapPageProps> = ({ db, setDb }) => {
     setActiveRowId(null);
   };
 
-  // Math Metrics: Calculating Progression States
-  const calculateRowProgress = (row: RoadmapRow) => {
-    if (row.grids.length === 0) return 0;
-    const completedCount = row.grids.filter((g) => g.isCompleted).length;
-    return Math.round((completedCount / row.grids.length) * 100);
-  };
-
-  const calculateGlobalPageProgress = () => {
-    let totalGrids = 0;
-    let completedGrids = 0;
-    currentRows.forEach((r) => {
-      totalGrids += r.grids.length;
-      completedGrids += r.grids.filter((g) => g.isCompleted).length;
-    });
-    if (totalGrids === 0) return 0;
-    return Math.round((completedGrids / totalGrids) * 100);
-  };
-
-  const calculateRowHourMetrics = (row: RoadmapRow) => {
-    let studiedMinutes = 0;
-    let leftMinutes = 0;
-
-    row.grids.forEach((g) => {
-      if (g.isCompleted) {
-        studiedMinutes += g.durationMinutes || 0;
-      } else {
-        leftMinutes += g.durationMinutes || 0;
-      }
-    });
-
-    return {
-      studiedHours: (studiedMinutes / 60).toFixed(1),
-      leftHours: (leftMinutes / 60).toFixed(1)
-    };
-  };
-
-  // Matrix Modifiers (Forms Execution Actions)
   const handleCreateRow = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRowTitle.trim()) return;
@@ -288,7 +318,7 @@ const RoadmapPage: React.FC<RoadmapPageProps> = ({ db, setDb }) => {
   };
 
   const handleDeleteRow = (rowId: string) => {
-    if (!window.confirm("Purge this tactical roadmap row and all its assigned grid subtopics?")) return;
+    if (!window.confirm("Purge this tactical roadmap row?")) return;
     saveRoadmapToDb(currentRows.filter((r) => r.id !== rowId));
   };
 
@@ -320,149 +350,182 @@ const RoadmapPage: React.FC<RoadmapPageProps> = ({ db, setDb }) => {
     setNewGridDuration(60);
   };
 
-  const globalPagePercent = calculateGlobalPageProgress();
+  const globalTelemetry = calculateGlobalPageProgress();
+  const velocityForecast = calculateTotalRemainingTime();
 
   return (
-    <div className="dashboard-container page-fade-in" style={{ maxWidth: "1140px", paddingBottom: "120px", position: "relative", paddingTop: "20px" }}>
+    <div className="w-full max-w-[1000px] mx-auto p-4 md:p-6 box-border select-none" style={{ color: "var(--text-main)" }}>
 
-      {/* 🏅 TOP OVERALL PAGE MASTER TRACK BAR */}
-      <div style={{
-        width: "100%",
-        background: "#08080d",
-        border: "1px solid #1a1a26",
-        borderRadius: "14px",
-        padding: "16px 24px",
-        marginBottom: "32px",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: "20px"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <span style={{ fontSize: "16px" }}>🏆</span>
-          <div>
-            <h4 style={{ margin: 0, fontSize: "14px", fontWeight: 800, color: "#fff", letterSpacing: "-0.2px" }}>Overall Curriculum Metrics</h4>
-            <p style={{ margin: 0, fontSize: "11.5px", color: "rgba(255,255,255,0.35)" }}>Target Daily Split Allocation: {DAILY_STUDY_TARGET_HOURS} Hours / Day</p>
+      {/* GLOBAL MASTER METRICS & VELOCITY PANEL */}
+      <div className="w-full p-5 rounded-xl border mb-6 backdrop-blur-md grid grid-cols-1 md:grid-cols-3 gap-6 items-center" style={{ backgroundColor: "var(--bg-glass)", borderColor: "var(--border-glass)" }}>
+        <div className="md:col-span-2">
+          <div className="flex gap-3 items-center mb-3">
+            <span className="text-xl">🏆</span>
+            <div>
+              <h4 className="text-sm font-bold tracking-wide m-0">Overall Matrix Milestones</h4>
+              <p className="text-[11px] m-0 mt-0.5" style={{ color: "var(--text-muted)" }}>
+                Modules Complete: {globalTelemetry.completedGrids} / {globalTelemetry.totalGrids}
+              </p>
+            </div>
+          </div>
+          <div className="w-full">
+            <div className="flex justify-between text-xs font-semibold mb-1.5">
+              <span style={{ color: "var(--text-muted)" }}>Curriculum Matrix Completed</span>
+              <span>{globalTelemetry.percent}%</span>
+            </div>
+            <div className="telemetry-bar-bg w-full h-2 rounded overflow-hidden" style={{ backgroundColor: "var(--border-subtle)" }}>
+              <div
+                className="h-full transition-all duration-1000"
+                style={{ width: `${globalTelemetry.percent}%`, backgroundColor: "var(--accent-color)" }}
+              />
+            </div>
           </div>
         </div>
 
-        <div style={{ flex: 1, maxWidth: "60%" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11.5px", marginBottom: "6px", fontWeight: 700 }}>
-            <span style={{ color: "rgba(255,255,255,0.4)" }}>Global Master Metric Progress</span>
-            <span style={{ color: "#6366f1" }}>{globalPagePercent}%</span>
+        {/* VARIABLE REALTIME VELOCITY FORECASTER */}
+        <div className="p-3.5 rounded-lg border flex flex-col justify-between h-full" style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)" }}>
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">⚡ Velocity Engine</span>
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                step="0.5"
+                min="0.5"
+                max="24"
+                className="w-12 text-center text-xs p-0.5 font-mono font-bold rounded border"
+                style={{ backgroundColor: "var(--bg-fallback)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }}
+                value={dailyTargetHours}
+                onChange={(e) => handleUpdateHours(parseFloat(e.target.value))}
+              />
+              <span className="text-[11px] font-semibold" style={{ color: "var(--text-muted)" }}>h/day</span>
+            </div>
           </div>
-          <div style={{ width: "100%", height: "6px", background: "#11111c", borderRadius: "3px", overflow: "hidden" }}>
-            <div style={{
-              width: `${globalPagePercent}%`,
-              height: "100%",
-              background: "linear-gradient(90deg, #4f46e5, #06b6d4)",
-              boxShadow: "0 0 10px rgba(99,102,241,0.6)",
-              transition: "width 0.5s ease"
-            }} />
+          <div className="mt-1">
+            <div className="text-[11px] font-medium" style={{ color: "var(--text-muted)" }}>Remaining: <span className="font-mono text-white font-bold">{velocityForecast.hoursRemaining}h</span></div>
+            <div className="text-xs font-bold mt-1 text-cyan-400 font-mono">≈ {velocityForecast.daysRemaining} Calibration Days</div>
           </div>
         </div>
       </div>
 
-      {/* HEADER SECTION */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", width: "100%", marginBottom: "40px" }}>
+      {/* SYLLABUS DIRECTORY SYSTEM DROPDOWN ACCORDING TO CATEGORIES */}
+      <div className="w-full mb-6 border rounded-xl overflow-hidden backdrop-blur-md transition-all" style={{ backgroundColor: "var(--bg-glass)", borderColor: "var(--border-glass)" }}>
+        <button
+          onClick={() => setIsSyllabusOpen(!isSyllabusOpen)}
+          className="w-full p-4 flex justify-between items-center border-none bg-transparent font-bold text-sm tracking-wide text-left cursor-pointer transition-colors"
+          style={{ color: "var(--text-main)", fontFamily: "var(--font-display)" }}
+        >
+          <div className="flex items-center gap-2">
+            <span>📚</span>
+            <span>FULL DIRECTORY SYLLABUS VIEW</span>
+            <span className="text-[10px] px-2 py-0.5 rounded font-mono font-medium bg-cyan-950 text-cyan-400 border border-cyan-800">
+              {globalTelemetry.totalGrids} Structural Core Elements
+            </span>
+          </div>
+          <span className="text-xs transition-transform duration-200" style={{ transform: isSyllabusOpen ? "rotate(180deg)" : "rotate(0deg)" }}>👇</span>
+        </button>
+
+        {isSyllabusOpen && (
+          <div className="p-4 border-t flex flex-col gap-4 max-h-[400px] overflow-y-auto" style={{ borderColor: "var(--border-subtle)", backgroundColor: "rgba(0,0,0,0.1)" }}>
+            {currentRows.map((row) => (
+              <div key={`syllabus-${row.id}`} className="border rounded-lg p-3" style={{ borderColor: "var(--border-subtle)", backgroundColor: "var(--bg-fallback)" }}>
+                <div className="flex justify-between items-center border-b pb-1.5 mb-2" style={{ borderColor: "var(--border-subtle)" }}>
+                  <h4 className="text-xs font-bold m-0" style={{ color: row.color }}>{row.title}</h4>
+                  <span className="text-[10px] font-mono" style={{ color: "var(--text-muted)" }}>({calculateRowProgress(row)}% Done)</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  {row.grids.map((grid) => (
+                    <div key={`syllabus-grid-${grid.id}`} className="flex justify-between items-center text-xs p-1.5 rounded" style={{ backgroundColor: "var(--pill-bg)" }}>
+                      <div className="flex items-center gap-2 truncate pr-4">
+                        <span className="text-[10px]">{grid.isCompleted ? "🟩" : "⬜"}</span>
+                        <span className="font-medium truncate">{grid.title}</span>
+                      </div>
+                      <span className="text-[10px] font-mono shrink-0" style={{ color: "var(--text-muted)" }}>
+                        {grid.isCompleted ? `Completed At: ${grid.completedAt?.split(',')[0]}` : `${(grid.durationMinutes / 60).toFixed(1)}h required`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* COMPONENT CONTENT CONTROL HEADER */}
+      <div className="flex justify-between items-center gap-4 mb-6">
         <div>
-          <h2 style={{ fontSize: "28px", fontWeight: 900, margin: "0 0 8px 0", color: "#ffffff", letterSpacing: "-0.8px" }}>
-            Machine Learning Engineering Roadmap
-          </h2>
-          <p style={{ fontSize: "14.5px", color: "rgba(255,255,255,0.4)", margin: 0 }}>
-            Sequential tracking grid environment. Commit daily blocks and finalize tracks with active completion handles.
+          <h2 className="text-xl md:text-2xl font-bold tracking-tight m-0 uppercase" style={{ fontFamily: "var(--font-display)" }}>Machine Learning Engineering Roadmap</h2>
+          <p className="text-xs md:text-sm m-0 mt-1" style={{ color: "var(--text-muted)" }}>
+            Sequential dependency architecture. Detailed curiosity exploration allowed; Completion locks enforce track order.
           </p>
         </div>
-
-        <button
-          onClick={() => setIsEditModalOpen(true)}
-          style={{
-            background: "#0d0d14", border: "1px solid #27272a", color: "#a1a1aa",
-            padding: "12px 24px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, cursor: "pointer",
-            transition: "all 0.2s"
-          }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = "#4f46e5"; e.currentTarget.style.color = "#ffffff"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = "#27272a"; e.currentTarget.style.color = "#a1a1aa"; }}
-        >
-          ⚙️ Manage Matrix Hub
+        <button onClick={() => setIsEditModalOpen(true)} className="border-none rounded-lg py-2 px-3.5 text-xs font-semibold cursor-pointer transition-all shrink-0" style={{ backgroundColor: "var(--accent-color)", color: "var(--bg-fallback)" }}>
+          ⚙️ Manage Pipeline
         </button>
       </div>
 
-      {/* MATRIX FLOW ROW MAP */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "32px", width: "100%" }}>
-        {currentRows.map((row) => {
+      {/* ORDER-PRIORITIZED MATRIX FLOW */}
+      <div className="flex flex-col gap-6">
+        {currentRows.map((row, rowIndex) => {
           const progressVal = calculateRowProgress(row);
           const { studiedHours, leftHours } = calculateRowHourMetrics(row);
+          const nextRowReference = currentRows[rowIndex + 1];
+          const unlocked = isRowUnlocked(rowIndex);
 
           return (
             <div
               key={row.id}
+              className="rounded-xl border p-5 backdrop-blur-md transition-all relative overflow-hidden"
               style={{
-                background: "#0a0a0f", border: "1px solid #171725", borderRadius: "20px",
-                padding: "28px", display: "flex", flexDirection: "column", gap: "20px",
-                boxShadow: "0 10px 30px rgba(0,0,0,0.4)"
+                backgroundColor: "var(--bg-glass)",
+                borderColor: "var(--border-glass)",
+                opacity: unlocked ? 1 : 0.6,
+                filter: unlocked ? "none" : "grayscale(20%)"
               }}
             >
-              {/* Row Upper Info Banner */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "16px" }}>
-                <div>
-                  <h3 style={{ fontSize: "18px", fontWeight: 800, color: "#ffffff", margin: "0 0 6px 0" }}>
-                    {row.title}
-                  </h3>
+              {!unlocked && (
+                <div className="absolute top-2 right-3 z-10 flex items-center gap-1 bg-amber-950/80 border border-amber-500/40 text-amber-400 text-[10px] uppercase font-black tracking-widest px-2.5 py-1 rounded-md">
+                  🔒 Gated: Complete prior tiers to check off
+                </div>
+              )}
 
-                  {/* Timeline with Metric Badges (Green for Studied / Red for Left) */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                    <span style={{ fontSize: "12.5px", color: "rgba(255,255,255,0.35)", fontWeight: 600 }}>
-                      {row.timeline}
-                    </span>
-                    <span style={{ background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.25)", color: "#10b981", fontSize: "11px", fontWeight: 700, padding: "2px 8px", borderRadius: "6px" }}>
-                      ⏱️ {studiedHours} hours studied
-                    </span>
-                    <span style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.25)", color: "#ef4444", fontSize: "11px", fontWeight: 700, padding: "2px 8px", borderRadius: "6px" }}>
-                      ⏳ {leftHours} hours left
-                    </span>
+              {/* Row Banner Metadata Information */}
+              <div className="flex flex-col md:flex-row justify-between gap-4 pb-4 mb-4 border-b border-dashed" style={{ borderColor: "var(--border-subtle)" }}>
+                <div>
+                  <h3 className="text-base font-bold tracking-wide m-0" style={{ color: row.color }}>{row.title}</h3>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded border" style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-muted)" }}>{row.timeline}</span>
+                    <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded" style={{ backgroundColor: "rgba(34, 211, 238, 0.1)", color: "var(--secondary-accent)" }}>⏱️ {studiedHours}h processed</span>
+                    <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded" style={{ backgroundColor: "rgba(244, 114, 182, 0.1)", color: "var(--accent-color)" }}>⏳ {leftHours}h left</span>
                   </div>
                 </div>
 
-                {/* Progress Alignment Box */}
-                <div style={{ width: "220px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11.5px", marginBottom: "6px", fontWeight: 700, color: "rgba(255,255,255,0.4)" }}>
-                    <span>Track Completion</span>
+                <div className="w-full md:w-48">
+                  <div className="flex justify-between text-[11px] font-semibold mb-1">
+                    <span style={{ color: "var(--text-muted)" }}>Phase Completion Metrics</span>
                     <span style={{ color: row.color }}>{progressVal}%</span>
                   </div>
-                  <div style={{ width: "100%", height: "4px", background: "#161622", borderRadius: "2px", overflow: "hidden" }}>
-                    <div style={{
-                      width: `${progressVal}%`, height: "100%",
-                      background: row.color, boxShadow: `0 0 8px ${row.color}`,
-                      transition: "width 0.4s ease"
-                    }} />
+                  <div className="telemetry-bar-bg h-1.5 w-full rounded overflow-hidden" style={{ backgroundColor: "var(--border-subtle)" }}>
+                    <div className="h-full" style={{ width: `${progressVal}%`, backgroundColor: row.color }} />
                   </div>
                 </div>
               </div>
 
-              {/* Subtopic Inner Grids Matrix Stack */}
-              <div style={{
-                display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-                gap: "18px", marginTop: "4px"
-              }}>
+              {/* Grid Subtopics Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {row.grids.map((grid) => {
                   const isHovered = hoveredGridId === grid.id;
-
-                  let cardBorder = "1px solid #161622";
-                  let cardGlow = "0 4px 12px rgba(0,0,0,0.2)";
-                  let opacityStyle = "1";
-                  let backdropBlur = "none";
+                  let cardStyles: React.CSSProperties = {
+                    backgroundColor: "var(--pill-bg)",
+                    borderColor: "var(--border-subtle)",
+                    cursor: "pointer" // Allowed curiosity exploration clicking anywhere anytime
+                  };
 
                   if (grid.isCompleted) {
-                    cardBorder = `1px solid rgba(16, 185, 129, 0.4)`;
-                    opacityStyle = "0.75";
-                    backdropBlur = "blur(1.5px)";
+                    cardStyles.backgroundColor = "rgba(16, 185, 129, 0.05)";
+                    cardStyles.borderColor = "rgba(16, 185, 129, 0.4)";
                   } else if (isHovered) {
-                    cardBorder = `1px solid ${row.color}`;
-                    cardGlow = `0 0 20px ${row.color}33`;
-                  } else if (grid.lastViewed) {
-                    cardBorder = `1px solid ${row.color}55`;
+                    cardStyles.borderColor = row.color;
                   }
 
                   return (
@@ -471,214 +534,198 @@ const RoadmapPage: React.FC<RoadmapPageProps> = ({ db, setDb }) => {
                       onClick={() => handleOpenGridWorkspace(row.id, grid)}
                       onMouseEnter={() => setHoveredGridId(grid.id)}
                       onMouseLeave={() => setHoveredGridId(null)}
-                      style={{
-                        background: "#0e0e16", border: cardBorder, borderRadius: "14px",
-                        padding: "20px", cursor: "pointer", boxShadow: cardGlow,
-                        opacity: opacityStyle,
-                        filter: backdropBlur !== "none" ? backdropBlur : undefined,
-                        transform: isHovered && !grid.isCompleted ? "translateY(-4px) scale(1.015)" : "translateY(0) scale(1)",
-                        transition: "all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1)",
-                        position: "relative"
-                      }}
+                      className="rounded-xl border p-4 flex flex-col justify-between min-h-[160px] transition-all duration-200 relative overflow-hidden"
+                      style={cardStyles}
                     >
-                      {/* Completion Premium Banner Overlay Graphics */}
                       {grid.isCompleted && (
-                        <div style={{ position: "absolute", top: "12px", right: "12px", background: "#10b981", color: "#fff", fontSize: "9px", fontWeight: 900, textTransform: "uppercase", padding: "2px 6px", borderRadius: "4px", letterSpacing: "0.5px" }}>
-                          ✓ Completed
-                        </div>
+                        <div className="absolute top-0 right-0 text-[9px] font-bold bg-emerald-500 text-black px-2 py-0.5 rounded-bl-lg">✓ Completed</div>
                       )}
 
-                      <h5 style={{ margin: "0 0 8px 0", fontSize: "14.5px", fontWeight: 700, color: grid.isCompleted ? "#10b981" : "#ffffff", paddingRight: grid.isCompleted ? "65px" : "0" }}>
-                        {grid.title}
-                      </h5>
+                      <div>
+                        <h5 className="text-sm font-bold m-0 mb-1.5 truncate pr-8" style={{ color: "var(--text-main)" }}>{grid.title}</h5>
+                        <p className="text-xs m-0 line-clamp-3" style={{ color: "var(--text-muted)" }}>{grid.contents}</p>
+                      </div>
 
-                      <p style={{ margin: "0 0 14px 0", fontSize: "12.5px", color: "rgba(255,255,255,0.38)", lineHeight: "1.45" }}>
-                        {grid.contents.length > 90 ? `${grid.contents.substring(0, 90)}...` : grid.contents}
-                      </p>
-
-                      {/* Log Analytics Footer Line Status Engine */}
-                      {grid.isCompleted ? (
-                        <div style={{ fontSize: "10px", fontWeight: 700, fontFamily: "monospace", color: "#10b981" }}>
-                          ⭐️ Finished in {(grid.durationMinutes / 60).toFixed(1)}h at {grid.completedAt?.split(",")[1] || grid.completedAt}
-                        </div>
-                      ) : grid.lastViewed ? (
-                        <div style={{ fontSize: "10.5px", fontWeight: 600, fontFamily: "monospace", color: row.color, display: "flex", alignItems: "center", gap: "4px" }}>
-                          <span>👁️</span> Reviewed: {grid.lastViewed.split(",")[1] || grid.lastViewed}
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: "10.5px", color: "rgba(255,255,255,0.15)", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                          ⏳ Unopened Module
-                        </div>
-                      )}
+                      <div className="text-[10px] font-medium font-mono pt-3 mt-3 border-t" style={{ borderColor: "var(--border-subtle)", color: grid.isCompleted ? "#34d399" : grid.lastViewed ? row.color : "var(--text-muted)" }}>
+                        {grid.isCompleted ? `✓ Read out: ${(grid.durationMinutes / 60).toFixed(1)}h` : grid.lastViewed ? `👁️ Active (${grid.lastViewed.split(',')[0]})` : "⏳ Unexplored Node"}
+                      </div>
                     </div>
                   );
                 })}
               </div>
+
+              <div className="mt-4 pt-3 border-t text-[10px] font-bold tracking-wider uppercase flex items-center gap-1.5" style={{ borderColor: "var(--border-subtle)", color: "var(--text-muted)" }}>
+                <span>➡️ NEXT PIPELINE UPGRADE:</span>
+                <span style={{ color: "var(--text-main)" }}>{nextRowReference ? nextRowReference.title : "🏁 Curriculum Core Mastery Complete"}</span>
+              </div>
+
             </div>
           );
         })}
       </div>
 
-      {/* MODAL LAYER 1: TRACK & GRID STRUCTURAL EDITOR */}
+      {/* STRUCTURAL ARCHITECT MODAL HUB */}
       {isEditModalOpen && (
-        <div className="modal-overlay" style={{ display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200 }} onClick={() => setIsEditModalOpen(false)}>
-          <div className="modal-content" style={{ maxWidth: "800px", width: "92%", background: "#08080f", border: "1px solid #1f1f2e", borderRadius: "24px", padding: "40px", position: "relative" }} onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setIsEditModalOpen(false)}>
+          <div className="border w-full max-w-[650px] p-6 shadow-2xl rounded-xl max-h-[90vh] overflow-y-auto relative" style={{ backgroundColor: "var(--bg-fallback)", borderColor: "var(--border-glass)", color: "var(--text-main)" }} onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setIsEditModalOpen(false)} className="absolute top-4 right-4 bg-transparent border-none text-base cursor-pointer" style={{ color: "var(--text-muted)" }}>✕</button>
 
-            <button
-              onClick={() => setIsEditModalOpen(false)}
-              style={{ position: "absolute", top: "24px", right: "24px", background: "#141420", border: "1px solid #27273a", color: "rgba(255,255,255,0.5)", width: "32px", height: "32px", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}
-            >
-              ✕
-            </button>
-
-            <div style={{ marginBottom: "28px" }}>
-              <h3 style={{ fontSize: "22px", fontWeight: 900, color: "#ffffff", margin: 0 }}>Structure Configuration Hub</h3>
-              <p style={{ fontSize: "13.5px", color: "rgba(255,255,255,0.4)", margin: "4px 0 0 0" }}>Append or remove timeline blocks. Cancel or cross out to exit without mutating.</p>
+            <div className="mb-5">
+              <h3 className="text-base font-bold font-mono uppercase tracking-tight m-0">Curriculum Architecture Hub</h3>
+              <p className="text-xs m-0 mt-0.5" style={{ color: "var(--text-muted)" }}>Append dependencies or shift row pipelines directly into the runtime matrix.</p>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "28px", maxHeight: "45vh", overflowY: "auto", paddingRight: "8px" }}>
-
-              {/* Form A: Row Insertion */}
-              <form onSubmit={handleCreateRow} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <h4 style={{ color: "#ffffff", margin: "0 0 4px 0", fontSize: "14.5px", fontWeight: 800 }}>➕ Deploy New Track Row</h4>
-                <input
-                  type="text" className="form-input" placeholder="Track Row Title"
-                  value={newRowTitle} onChange={(e) => setNewRowTitle(e.target.value)} required
-                />
-                <input
-                  type="text" className="form-input" placeholder="Timeline Segment (e.g. Weeks 1-2)"
-                  value={newRowTimeline} onChange={(e) => setNewRowTimeline(e.target.value)}
-                />
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.4)" }}>Accent Spectrum:</label>
-                  <input type="color" value={newRowColor} onChange={(e) => setNewRowColor(e.target.value)} style={{ background: "transparent", border: "none", cursor: "pointer" }} />
-                </div>
-                <button type="submit" className="btn-primary" style={{ padding: "10px", fontSize: "13px" }}>Inject Track Row</button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <form onSubmit={handleCreateRow} className="flex flex-col gap-3">
+                <h4 className="text-xs font-black tracking-wider uppercase m-0 border-b pb-1.5" style={{ borderColor: "var(--border-subtle)" }}>➕ Deploy Phase Component Row</h4>
+                <input type="text" placeholder="Phase Row Title Descriptor" className="border rounded-lg p-2.5 text-xs focus:outline-none w-full box-border" style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }} value={newRowTitle} onChange={(e) => setNewRowTitle(e.target.value)} required />
+                <input type="text" placeholder="Timeline Block Target (e.g. Week 4)" className="border rounded-lg p-2.5 text-xs focus:outline-none w-full box-border" style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }} value={newRowTimeline} onChange={(e) => setNewRowTimeline(e.target.value)} />
+                <div className="flex justify-between items-center text-xs">
+  <label style={{ color: "var(--text-muted)" }}>Highlighter Accent:</label>
+  <input
+    type="color"
+    className="border-none w-8 h-8 rounded cursor-pointer p-0"
+    value={newRowColor}
+    onChange={(e) => setNewRowColor(e.target.value)}
+  />
+</div>
+                <button type="submit" className="text-white text-xs font-mono font-bold py-2 px-4 rounded-lg border cursor-pointer transition-opacity hover:opacity-90 mt-2" style={{ backgroundColor: "var(--accent-color)", borderColor: "var(--accent-color)" }}>Inject Matrix Track Row</button>
               </form>
 
-              {/* Form B: Grid Subtopic Node Insertion */}
-              <form onSubmit={handleCreateGrid} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <h4 style={{ color: "#ffffff", margin: "0 0 4px 0", fontSize: "14.5px", fontWeight: 800 }}>➕ Inject Grid Subtopic Node</h4>
-                <select className="form-input" required value={targetRowForGrid} onChange={(e) => setTargetRowForGrid(e.target.value)} style={{ color: "#fff", background: "#0a0a10" }}>
-                  <option value="">-- Target Track Row --</option>
+              <form onSubmit={handleCreateGrid} className="flex flex-col gap-3">
+                <h4 className="text-xs font-black tracking-wider uppercase m-0 border-b pb-1.5" style={{ borderColor: "var(--border-subtle)" }}>➕ Inject Subtopic Core Segment Module</h4>
+                <select className="border rounded-lg p-2.5 text-xs focus:outline-none w-full box-border cursor-pointer" style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }} required value={targetRowForGrid} onChange={(e) => setTargetRowForGrid(e.target.value)}>
+                  <option value="">-- Target Prerequisite Row Assignment --</option>
                   {currentRows.map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}
                 </select>
-                <input type="text" className="form-input" placeholder="Subtopic Title" value={newGridTitle} onChange={(e) => setNewGridTitle(e.target.value)} required />
-                <input type="text" className="form-input" placeholder="Brief Summary Abstract" value={newGridContents} onChange={(e) => setNewGridContents(e.target.value)} />
-                <textarea className="form-input" placeholder="Core Studies Deliverables" value={newGridStudies} onChange={(e) => setNewGridStudies(e.target.value)} style={{ minHeight: "50px", resize: "vertical" }} />
-                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <label style={{ fontSize: "12px", color: "rgba(255,255,255,0.4)" }}>Allocation (Minutes):</label>
-                  <input type="number" className="form-input" value={newGridDuration} onChange={(e) => setNewGridDuration(Number(e.target.value))} style={{ maxWidth: "80px" }} />
+                <input type="text" placeholder="Module Subtopic Title" className="border rounded-lg p-2.5 text-xs focus:outline-none w-full box-border" style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }} value={newGridTitle} onChange={(e) => setNewGridTitle(e.target.value)} required />
+                <input type="text" placeholder="Brief Abstract Summary" className="border rounded-lg p-2.5 text-xs focus:outline-none w-full box-border" style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }} value={newGridContents} onChange={(e) => setNewGridContents(e.target.value)} />
+                <textarea placeholder="Core Deliverables Target Details..." className="border rounded-lg p-2.5 text-xs focus:outline-none w-full box-border resize-y min-h-[60px]" style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }} value={newGridStudies} onChange={(e) => setNewGridStudies(e.target.value)} />
+                <div className="flex justify-between items-center text-xs">
+                  <label style={{ color: "var(--text-muted)" }}>Allocation (Minutes):</label>
+                  <input type="number" className="border rounded-lg p-1.5 text-xs font-mono w-20 text-center focus:outline-none" style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }} value={newGridDuration} onChange={(e) => setNewGridDuration(Number(e.target.value))} />
                 </div>
-                <button type="submit" className="btn-primary" style={{ padding: "10px", fontSize: "13px", background: "#0f766e", border: "1px solid #14b8a6" }}>Inject Subtopic</button>
+                <button type="submit" className="text-black text-xs font-mono font-bold py-2 px-4 rounded-lg border cursor-pointer transition-opacity hover:opacity-90 mt-2" style={{ backgroundColor: "rgb(16, 185, 129)", borderColor: "rgb(16, 185, 129)" }}>Inject Component Node Module</button>
               </form>
-
             </div>
 
-            {/* Row Clear Destruction Matrix Panel */}
-            <div style={{ marginTop: "24px", borderTop: "1px solid #161622", paddingTop: "16px" }}>
-              <h4 style={{ color: "#ef4444", margin: "0 0 12px 0", fontSize: "13px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Danger Zone Row Drop</h4>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "120px", overflowY: "auto" }}>
+            <div className="mt-6 pt-4 border-t" style={{ borderColor: "var(--border-subtle)" }}>
+              <h4 className="text-xs font-black tracking-wider text-red-400 uppercase m-0 mb-3">Destructive Matrix Modifications Zone</h4>
+              <div className="flex flex-col gap-2 max-h-[120px] overflow-y-auto pr-1">
                 {currentRows.map((r) => (
-                  <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0d0d14", padding: "8px 14px", borderRadius: "8px" }}>
-                    <span style={{ fontSize: "13px", color: "#fff" }}>{r.title} <span style={{ color: "rgba(255,255,255,0.3)" }}>({r.grids.length} nodes)</span></span>
-                    <button type="button" onClick={() => handleDeleteRow(r.id)} style={{ background: "transparent", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "12px" }}>Drop Track Row 🗑️</button>
+                  <div key={r.id} className="flex justify-between items-center p-2 rounded border text-xs" style={{ backgroundColor: "rgba(239, 68, 68, 0.02)", borderColor: "var(--border-subtle)" }}>
+                    <span className="truncate pr-4">{r.title} <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>({r.grids.length} child modules)</span></span>
+                    <button type="button" onClick={() => handleDeleteRow(r.id)} className="border-none bg-transparent font-bold text-red-400 hover:text-red-300 cursor-pointer text-xs">Drop Row 🗑️</button>
                   </div>
                 ))}
               </div>
             </div>
-
-            <div style={{ width: "100%", display: "flex", justifyContent: "flex-end", marginTop: "20px" }}>
-              <button onClick={() => setIsEditModalOpen(false)} style={{ background: "transparent", border: "1px solid #27273a", color: "#a1a1aa", padding: "10px 24px", borderRadius: "8px", fontSize: "13px", cursor: "pointer" }}>
-                Close Hub
-              </button>
-            </div>
-
           </div>
         </div>
       )}
 
-      {/* MODAL LAYER 2: CORE ANALYSIS FOCUS WORKSPACE */}
+      {/* ACTIVE WORKSPACE DRILLDOWN HUB */}
       {activeGrid && (
-        <div className="modal-overlay" style={{ display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1200 }} onClick={() => { setActiveGrid(null); setActiveRowId(null); }}>
-          <div className="modal-content" style={{ maxWidth: "640px", width: "90%", boxShadow: "0 25px 70px rgba(0,0,0,0.85)", border: "1px solid #1e1e2f", borderRadius: "24px", padding: "36px", position: "relative", background: "#08080f" }} onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => { setActiveGrid(null); setActiveRowId(null); }}>
+          <div className="border w-full max-w-[750px] p-6 shadow-2xl rounded-xl relative" style={{ backgroundColor: "var(--bg-fallback)", borderColor: "var(--border-glass)", color: "var(--text-main)" }} onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => { setActiveGrid(null); setActiveRowId(null); }} className="absolute top-4 right-4 bg-transparent border-none text-base cursor-pointer" style={{ color: "var(--text-muted)" }}>✕</button>
 
-            <button
-              onClick={() => { setActiveGrid(null); setActiveRowId(null); }}
-              style={{ position: "absolute", top: "24px", right: "24px", background: "#141420", border: "1px solid #27273a", color: "rgba(255,255,255,0.5)", width: "32px", height: "32px", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "bold" }}
-            >
-              ✕
-            </button>
-
-            <div style={{ marginBottom: "24px" }}>
-              <span style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "#3b82f6", letterSpacing: "1px" }}>
-                Operational Study Module Target
-              </span>
-              <h3 style={{ fontSize: "22px", fontWeight: 900, color: "#ffffff", margin: "6px 0 0 0" }}>
-                {activeGrid.title} {activeGrid.isCompleted && <span style={{ color: "#10b981", fontSize: "14px", marginLeft: "10px" }}>(✓ Completed)</span>}
+            <div className="mb-4">
+              <span className="text-[9px] font-mono font-black tracking-widest text-cyan-400 uppercase">Active Workspace Context Target Frame</span>
+              <h3 className="text-base font-bold uppercase tracking-tight m-0 mt-1 truncate pr-8">
+                {activeGrid.title} {activeGrid.isCompleted && <span className="text-emerald-400 lowercase text-xs">(✓ Core Block Verified)</span>}
               </h3>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "18px", marginBottom: "24px" }}>
-              <div>
-                <h5 style={{ color: "rgba(255,255,255,0.4)", fontSize: "11px", fontWeight: 700, margin: "0 0 6px 0", textTransform: "uppercase" }}>Abstract parameters</h5>
-                <p style={{ margin: 0, color: "#ffffff", fontSize: "14px", lineHeight: "1.5" }}>{activeGrid.contents}</p>
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-5 items-start">
+              <div className="md:col-span-2 flex flex-col gap-3.5">
+                <div>
+                  <h5 className="text-[10px] font-bold uppercase tracking-wider m-0 mb-1" style={{ color: "var(--text-muted)" }}>Abstract Parameters</h5>
+                  <p className="text-xs m-0 leading-relaxed">{activeGrid.contents}</p>
+                </div>
+
+                <div className="p-3.5 rounded-lg border" style={{ backgroundColor: "rgba(34, 211, 238, 0.02)", borderColor: "rgba(34, 211, 238, 0.2)" }}>
+                  <h5 className="text-[10px] font-bold tracking-wider uppercase text-cyan-400 m-0 mb-1.5">🎯 Task Deliverables</h5>
+                  <p className="text-xs m-0 leading-relaxed" style={{ color: "var(--text-main)" }}>{activeGrid.coreStudies}</p>
+                </div>
+
+                <div className="flex justify-between items-center text-xs pt-2">
+                  <label className="font-semibold" style={{ color: "var(--text-muted)" }}>Time Bound Allocation:</label>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      className="border rounded-lg p-1 text-xs font-mono w-16 text-center focus:outline-none"
+                      style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)", color: "var(--text-main)" }}
+                      disabled={activeGrid.isCompleted}
+                      value={activeGrid.durationMinutes || 0}
+                      onChange={(e) => setActiveGrid({ ...activeGrid, durationMinutes: Number(e.target.value) })}
+                    />
+                    <span className="text-[11px]" style={{ color: "var(--text-muted)" }}>min</span>
+                  </div>
+                </div>
               </div>
 
-              <div style={{ padding: "18px", background: "#0e0e18", border: "1px solid #1c1c2e", borderRadius: "14px" }}>
-                <h5 style={{ color: "#14b8a6", fontSize: "11px", fontWeight: 800, margin: "0 0 8px 0", textTransform: "uppercase" }}>🎯 Core Study Execution Deliverables</h5>
-                <p style={{ margin: 0, color: "rgba(255,255,255,0.75)", fontSize: "13.5px", lineHeight: "1.5" }}>{activeGrid.coreStudies}</p>
+              <div className="md:col-span-3 border rounded-xl p-3 flex flex-col gap-2" style={{ backgroundColor: "var(--pill-bg)", borderColor: "var(--border-subtle)" }}>
+                <div className="flex justify-between items-center border-b pb-2" style={{ borderColor: "var(--border-subtle)" }}>
+                  <label className="text-[10px] font-black uppercase tracking-wider" style={{ color: "var(--text-muted)" }}>💻 Architecture Scratchpad</label>
+                  <div className="flex border rounded overflow-hidden" style={{ borderColor: "var(--border-subtle)" }}>
+                    <button
+                      type="button"
+                      className="text-[10px] font-bold px-2.5 py-1 border-none cursor-pointer"
+                      style={{ backgroundColor: scratchpadTab === "write" ? "var(--accent-color)" : "transparent", color: scratchpadTab === "write" ? "black" : "var(--text-main)" }}
+                      onClick={() => setScratchpadTab("write")}
+                    >
+                      Write Code/Notes
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[10px] font-bold px-2.5 py-1 border-none cursor-pointer"
+                      style={{ backgroundColor: scratchpadTab === "preview" ? "var(--accent-color)" : "transparent", color: scratchpadTab === "preview" ? "black" : "var(--text-main)" }}
+                      onClick={() => setScratchpadTab("preview")}
+                    >
+                      Plaintext Preview
+                    </button>
+                  </div>
+                </div>
+
+                {scratchpadTab === "write" ? (
+                  <textarea
+                    className="border rounded-lg p-2 text-xs font-mono focus:outline-none resize-none bg-black/40 text-emerald-400 border-none w-full box-border"
+                    rows={8}
+                    placeholder={`# Stash calculations or algorithm execution matrices here...\ndef custom_gradient_descent():\n    # Implement mathematical trajectory calculations`}
+                    value={activeGrid.remarks || ""}
+                    onChange={(e) => setActiveGrid({ ...activeGrid, remarks: e.target.value })}
+                  />
+                ) : (
+                  <div className="text-xs p-2 rounded bg-black/20 font-sans text-stone-300 min-h-[148px] max-h-[148px] overflow-y-auto whitespace-pre-wrap leading-relaxed select-text">
+                    {activeGrid.remarks ? activeGrid.remarks : <span className="italic text-stone-500">Scratchpad context layer remains unwritten.</span>}
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Allocation Box */}
-            <div style={{ display: "flex", alignItems: "center", gap: "16px", borderTop: "1px solid #161622", paddingTop: "18px", marginBottom: "20px" }}>
-              <label style={{ fontSize: "13px", fontWeight: 700, color: "rgba(255,255,255,0.5)" }}>Target Allocation Duration (Minutes):</label>
-              <input
-                type="number" className="form-input"
-                disabled={activeGrid.isCompleted}
-                value={activeGrid.durationMinutes || 0}
-                onChange={(e) => setActiveGrid({ ...activeGrid, durationMinutes: Number(e.target.value) })}
-                style={{ maxWidth: "100px", textAlign: "center", fontWeight: "bold", opacity: activeGrid.isCompleted ? 0.5 : 1 }}
-              />
-            </div>
-
-            {/* Note Remarks Box */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "28px" }}>
-              <label style={{ fontSize: "11px", fontWeight: 800, textTransform: "uppercase", color: "rgba(255,255,255,0.4)" }}>✍️ Module Activity Remarks & Notes</label>
-              <textarea
-                className="form-input" rows={4}
-                placeholder="Write custom notes, formulas, or sprint tracking references here..."
-                value={activeGrid.remarks || ""}
-                onChange={(e) => setActiveGrid({ ...activeGrid, remarks: e.target.value })}
-                style={{ padding: "14px", background: "#040408", fontSize: "13.5px", resize: "none" }}
-              />
-            </div>
-
-            {/* Bottom Form Action Buttons */}
-            <div style={{ width: "100%", display: "flex", justifyContent: "space-between", gap: "12px" }}>
+            {/* Modal Bottom Actions Control Cluster */}
+            <div className="flex justify-between gap-3 mt-5 pt-3 border-t" style={{ borderColor: "var(--border-subtle)" }}>
               <div>
                 {!activeGrid.isCompleted && (
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateGridParameters(true)}
-                    style={{ background: "#065f46", border: "1px solid #059669", color: "#fff", padding: "12px 24px", borderRadius: "10px", fontSize: "13.5px", fontWeight: 700, cursor: "pointer" }}
-                  >
-                    ✓ Mark As Complete
-                  </button>
+                  isRowUnlocked(currentRows.findIndex(r => r.id === activeRowId)) ? (
+                    <button type="button" onClick={() => handleUpdateGridParameters(true)} className="text-black text-xs font-mono font-bold py-2 px-3 rounded-lg border cursor-pointer" style={{ backgroundColor: "rgb(16, 185, 129)", borderColor: "rgb(16, 185, 129)" }}>
+                      ✓ Complete Sprint Node
+                    </button>
+                  ) : (
+                    <div className="text-[11px] font-bold text-amber-400 bg-amber-950/40 border border-amber-500/30 px-3 py-2 rounded-lg">
+                      🔒 Gated: Finish prerequisite completion blocks above to check off this node
+                    </div>
+                  )
                 )}
               </div>
 
-              <div style={{ display: "flex", gap: "12px" }}>
-                <button
-                  type="button"
-                  onClick={() => { setActiveGrid(null); setActiveRowId(null); }}
-                  style={{ background: "transparent", border: "1px solid #27273a", color: "#a1a1aa", padding: "12px 24px", borderRadius: "10px", fontSize: "13.5px", cursor: "pointer" }}
-                >
-                  Cancel
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { setActiveGrid(null); setActiveRowId(null); }} className="text-xs font-mono font-bold px-3 py-2 rounded-lg border cursor-pointer" style={{ backgroundColor: "transparent", borderColor: "var(--border-subtle)", color: "var(--text-muted)" }}>
+                  Dismiss
                 </button>
-                <button type="button" onClick={() => handleUpdateGridParameters(false)} className="btn-primary" style={{ padding: "12px 32px", fontSize: "13.5px", fontWeight: 700, borderRadius: "10px" }}>
-                  Commit Changes
+                <button type="button" onClick={() => handleUpdateGridParameters(false)} className="text-xs font-mono font-bold px-4 py-2 rounded-lg border cursor-pointer" style={{ backgroundColor: "var(--accent-color)", borderColor: "var(--accent-color)", color: "var(--bg-fallback)" }}>
+                  Commit Modifications
                 </button>
               </div>
             </div>

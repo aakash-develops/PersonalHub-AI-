@@ -5,11 +5,12 @@ import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import initialSchema from './data/initialSchema.json';
 import type { AppDatabaseState } from './types/schema';
 
-// 2. Global Layout Components
+// 2. Global Layout Components & Providers
 import TopNavbar from './components/layout/TopNavbar';
 import Footer from './components/footer/footer';
 import AdminPanel from './components/admin/AdminPanel';
-import { CosmicBackground } from './components/cosmic/CosmicBackground'; // Added Cosmic Background
+import { CosmicBackground } from './components/cosmic/CosmicBackground';
+import { ThemeProvider, useTheme } from './components/layout/ThemeProvider';
 
 // 3. Operational Target Pages
 import MainEntrance from './pages/WelcomePage';
@@ -22,49 +23,37 @@ import JobsPage from './pages/JobsPage';
 import FinnishPage from './pages/FinnishPage';
 import HistoryPage from './pages/HistoryPage';
 import GitHubPage from './pages/Github';
-import PortfolioPage  from './pages/Portfolio';
+import PortfolioPage from './pages/Portfolio';
 
-// ==========================================
-// 🛡️ SECURITY SHIELD: PROTECTED ROUTE GUARD
-// ==========================================
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-}
-
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  // Checks local storage for the cryptographic session token issued by server.js[cite: 13]
-  const isAuthenticated = !!localStorage.getItem('sys_session_token');
-
-  if (isAuthenticated) {
-    return <>{children}</>;
-  } else {
-    // If visitor tries to access admin spaces, redirect back to public calling card
-    return <Navigate to="/" replace />;
-  }
-};
-
-export default function App() {
+function AppContent() {
   const location = useLocation();
-
-  // State to control full-screen admin console visibility
+  const { theme, toggleTheme } = useTheme();
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
-
-  // Track database fetch state to prevent accidental over-writing/wipe on boot[cite: 13]
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
-  // 1. INITIAL BASE SKELETON CONFIGURATION FOR DATA SAFETY
+  // AUTH STATE TRACKING (Listens to local storage updates across routes)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return !!localStorage.getItem('sys_session_token');
+  });
+
+  // Track state changes dynamically when storage changes
+  useEffect(() => {
+    const checkAuth = () => {
+      setIsAuthenticated(!!localStorage.getItem('sys_session_token'));
+    };
+    window.addEventListener('storage', checkAuth);
+    return () => window.removeEventListener('storage', checkAuth);
+  }, []);
+
+  // INITIAL BASE SKELETON CONFIGURATION
   const [db, setDb] = useState<AppDatabaseState>(() => {
     return {
       ...initialSchema,
       daily_progress_clicks: {},
       modules_data: {
-        projects: [
-          { id: 'p-1', name: 'Freight/Transport ML Project', status: 'In progress', github_repo_id: 'g-1' }
-        ],
+        projects: [{ id: 'p-1', name: 'Freight/Transport ML Project', status: 'In progress', github_repo_id: 'g-1' }],
         learning_notes: [],
-        github_tracker: [
-          { id: 'g-1', repo_name: 'freight-transport-ml', commits_this_week: 0 }
-        ],
+        github_tracker: [{ id: 'g-1', repo_name: 'freight-transport-ml', commits_this_week: 0 }],
         job_tracker: [],
         finnish_tracker: [],
         habit_tracker: {
@@ -76,103 +65,66 @@ export default function App() {
     } as unknown as AppDatabaseState;
   });
 
-  // 2. AUTOMATIC READ OPERATION FROM DISK D: ON LAUNCH
+  // DB Sync Engines
   useEffect(() => {
     fetch('http://localhost:5000/api/db')
       .then((res) => res.json())
       .then((data) => {
-        if (data && data.modules_data) {
-          setDb(data);
-        }
-        setIsLoaded(true); // Database has successfully settled into memory
+        if (data && data.modules_data) setDb(data);
+        setIsLoaded(true);
       })
       .catch((err) => {
-        console.error("Could not fetch database file from local server:", err);
-        setIsLoaded(true); // Set to true anyway so local edits work even if offline
+        console.error("Could not fetch database file:", err);
+        setIsLoaded(true);
       });
   }, []);
 
-  // 3. AUTOMATIC WRITE OPERATION TO DISK D: ON DETECTED STATE CHANGES
   useEffect(() => {
-    // Block saving process until read operation completes to prevent empty sweeps[cite: 13]
     if (!isLoaded) return;
-
     fetch('http://localhost:5000/api/db', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(db),
-    }).catch((err) => console.error("Failed to automatically synchronize update to D Drive:", err));
+    }).catch((err) => console.error("Failed to sync updates:", err));
   }, [db, isLoaded]);
 
-  // --- MUTATOR HANDLERS ---
+  // MUTATOR IMPLEMENTATIONS (Forwarded down to child branches cleanly)
   const toggleDailyTask = (time: string) => {
     setDb((prev) => ({
       ...prev,
-      daily_progress_clicks: {
-        ...prev.daily_progress_clicks,
-        [time]: !prev.daily_progress_clicks[time],
-      },
+      daily_progress_clicks: { ...prev.daily_progress_clicks, [time]: !prev.daily_progress_clicks[time] },
     }));
   };
-
   const handleAddNote = (noteText: string) => {
     if (!noteText.trim()) return;
     setDb((prev) => ({
       ...prev,
       modules_data: {
         ...prev.modules_data,
-        learning_notes: [
-          {
-            id: `n-${Date.now()}`,
-            roadmap_id: `w-${prev.system_config.current_active_week}`,
-            note: noteText,
-            date: new Date().toLocaleDateString('en-GB'),
-          },
-          ...prev.modules_data.learning_notes,
-        ],
+        learning_notes: [{ id: `n-${Date.now()}`, roadmap_id: `w-${prev.system_config.current_active_week}`, note: noteText, date: new Date().toLocaleDateString('en-GB') }, ...prev.modules_data.learning_notes],
       },
     }));
   };
-
   const handleAddJob = (company: string, role: string) => {
     if (!company.trim() || !role.trim()) return;
     setDb((prev) => ({
       ...prev,
       modules_data: {
         ...prev.modules_data,
-        job_tracker: [
-          {
-            id: `j-${Date.now()}`,
-            company,
-            role,
-            status: 'Applied',
-            date_applied: new Date().toLocaleDateString('en-GB'),
-          },
-          ...prev.modules_data.job_tracker,
-        ],
+        job_tracker: [{ id: `j-${Date.now()}`, company, role, status: 'Applied', date_applied: new Date().toLocaleDateString('en-GB') }, ...prev.modules_data.job_tracker],
       },
     }));
   };
-
   const handleAddFinnishLog = (activity: string, minutes: number) => {
     if (!activity.trim() || minutes <= 0) return;
     setDb((prev) => ({
       ...prev,
       modules_data: {
         ...prev.modules_data,
-        finnish_tracker: [
-          {
-            id: `f-${Date.now()}`,
-            activity,
-            minutes_spent: minutes,
-            date: new Date().toLocaleDateString('en-GB')
-          },
-          ...prev.modules_data.finnish_tracker,
-        ],
+        finnish_tracker: [{ id: `f-${Date.now()}`, activity, minutes_spent: minutes, date: new Date().toLocaleDateString('en-GB') }, ...prev.modules_data.finnish_tracker],
       },
     }));
   };
-
   const handleToggleHabitDay = (habitName: string, dayIndex: number) => {
     setDb((prev) => {
       const currentTracker = { ...prev.modules_data.habit_tracker };
@@ -181,189 +133,101 @@ export default function App() {
         updatedDays[dayIndex] = !updatedDays[dayIndex];
         currentTracker[habitName] = updatedDays;
       }
-      return {
-        ...prev,
-        modules_data: {
-          ...prev.modules_data,
-          habit_tracker: currentTracker,
-        },
-      };
+      return { ...prev, modules_data: { ...prev.modules_data, habit_tracker: currentTracker } };
     });
   };
-
-  const handleToggleHabitDayDirectly = (habitName: string, dayIndex: number) => {
-    handleToggleHabitDay(habitName, dayIndex);
-  };
-
   const handleLogCommit = (repoId: string) => {
     setDb((prev) => ({
       ...prev,
       modules_data: {
         ...prev.modules_data,
         github_tracker: (prev.modules_data.github_tracker || []).map((repo) =>
-          repo.id === repoId
-            ? { ...repo, commits_this_week: repo.commits_this_week + 1 }
-            : repo
+          repo.id === repoId ? { ...repo, commits_this_week: repo.commits_this_week + 1 } : repo
         ),
       },
     }));
   };
 
-  // --- ENGINE PIPELINE FOR LIVE METRICS ---
+  // Metrics Crunchers
   const currentDailyTasks = Object.values(db.daily_progress_clicks || {}).filter(Boolean).length;
   const maxDailyTasks = db.daily_schedule_template?.length || 10;
-
   const totalCommits = db.modules_data.github_tracker?.reduce((acc: number, curr) => acc + curr.commits_this_week, 0) || 0;
   const currentJobsCount = db.modules_data.job_tracker?.length || 0;
   const finnishMinutes = db.modules_data.finnish_tracker?.reduce((acc: number, curr) => acc + curr.minutes_spent, 0) || 0;
 
-  const jobTargetMet = currentJobsCount >= (db.weekly_output_targets?.career_min_jobs || 0);
-  const githubTargetMet = totalCommits >= (db.weekly_output_targets?.github_min_commits || 0);
-  const finnishTargetMet = finnishMinutes >= 45;
-
-  let completedWeeklyGoals = 0;
-  if (jobTargetMet) completedWeeklyGoals++;
-  if (githubTargetMet) completedWeeklyGoals++;
-  if (finnishTargetMet) completedWeeklyGoals++;
-
-  const habitGridValues = Object.values(db.modules_data.habit_tracker || {}) as boolean[][];
-  const totalHabitSlots = habitGridValues.reduce((acc: number, arr) => acc + arr.length, 0);
-  const checkedHabitSlots = habitGridValues.reduce((acc: number, arr) => acc + arr.filter(Boolean).length, 0);
-  const habitConsistency = totalHabitSlots > 0 ? Math.round((checkedHabitSlots / totalHabitSlots) * 100) : 0;
-
   const dashboardMetrics = {
-    currentDailyTasks,
-    maxDailyTasks,
-    currentWeeklyGoals: completedWeeklyGoals,
-    maxWeeklyGoals: 3,
-    activeProjects: db.modules_data.projects?.filter(p => p.status === 'In progress').length || 0,
-    currentWeekStr: `W${db.system_config?.current_active_week || 1}`,
-    savedNotesCount: db.modules_data.learning_notes?.length || 0,
-    totalCommits,
-    jobApplicationsCount: currentJobsCount,
-    finnishPracticeStr: `${finnishMinutes}m`,
-    habitConsistencyStr: `${habitConsistency}%`
+    currentDailyTasks, maxDailyTasks, currentWeeklyGoals: (currentJobsCount >= (db.weekly_output_targets?.career_min_jobs || 0) ? 1 : 0) + (totalCommits >= (db.weekly_output_targets?.github_min_commits || 0) ? 1 : 0) + (finnishMinutes >= 45 ? 1 : 0),
+    maxWeeklyGoals: 3, activeProjects: db.modules_data.projects?.filter(p => p.status === 'In progress').length || 0,
+    currentWeekStr: `W${db.system_config?.current_active_week || 1}`, savedNotesCount: db.modules_data.learning_notes?.length || 0,
+    totalCommits, jobApplicationsCount: currentJobsCount, finnishPracticeStr: `${finnishMinutes}m`,
+    habitConsistencyStr: `${db.modules_data.habit_tracker ? Math.round((Object.values(db.modules_data.habit_tracker).reduce((acc: number, arr) => acc + arr.filter(Boolean).length, 0) / Object.values(db.modules_data.habit_tracker).reduce((acc: number, arr) => acc + arr.length, 0)) * 100) : 0}%`
   };
 
-  const isSplashPage = location.pathname === '/';
+  // 🚀 UPDATED: Suppresses TopNavbar on both the external portfolio page and the internal portal portal entry
+  const isSplashPage = location.pathname === '/' || location.pathname === '/MainEntrance';
 
-  // ==========================================
-  // 🚪 FULL SCREEN TAKEOVER PRE-RENDERING
-  // ==========================================
+  // 🔒 FIREWALL: Prevents non-authenticated users from reading inside pages
+  const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+    return localStorage.getItem('sys_session_token') ? <>{children}</> : <Navigate to="/" replace />;
+  };
+
+  // 🛑 GATED HUB: Prevents logged-in users from going back to the login screen via back button
+  const PublicOnlyRoute = ({ children }: { children: React.ReactNode }) => {
+    return localStorage.getItem('sys_session_token') ? <Navigate to="/dashboard" replace /> : <>{children}</>;
+  };
+
   if (isAdminOpen) {
-    return (
-      <AdminPanel
-        db={db}
-        setDb={setDb}
-        onClose={() => setIsAdminOpen(false)}
-      />
-    );
+    return <AdminPanel db={db} setDb={setDb} onClose={() => setIsAdminOpen(false)} />;
   }
 
-  // Normal app flow with Cosmic Background added globally
   return (
     <div className="app flex flex-col min-h-screen justify-between relative bg-transparent">
-      {/* ☄️ The unified star-bursting, planetary interactive system canvas */}
-      <CosmicBackground />
+      <CosmicBackground theme={theme} />
 
       <div className="flex-grow relative z-10">
-        {/* 🛠️ CONDITIONAL NAVBAR RENDERING: Hidden completely on welcome portal splash path */}
         {!isSplashPage && <TopNavbar currentWeek={db.system_config?.current_active_week} />}
 
         <Routes>
-          {/* Public Views */}
-          <Route path="/" element={<PortfolioPage/>} />
+          {/* Public Website Layer */}
+          <Route path="/" element={<PortfolioPage db={db} onToggleTheme={toggleTheme} currentTheme={theme} />} />
           <Route path="/github" element={<GitHubPage />} />
-          <Route
-            path="/MainEntrance"
-            element={
-              <MainEntrance />
-            }
-          />
 
-          {/* Authenticated Developer Consoles Protected via Guard Wrappers */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <Dashboard db={db} metrics={dashboardMetrics} />
-              </ProtectedRoute>
-            }
-          />
+          {/* Lock Screen (Blocks Back Navigation if already logged in) */}
+          <Route path="/MainEntrance" element={<PublicOnlyRoute><MainEntrance /></PublicOnlyRoute>} />
 
-          <Route
-            path="/daily"
-            element={
-              <ProtectedRoute>
-                <DailyPage
-                  db={db}
-                  setDb={setDb}
-                  onToggleTask={toggleDailyTask}
-                />
-              </ProtectedRoute>
-            }
-          />
+          {/* Secure Protected Core Channels */}
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard db={db} metrics={dashboardMetrics} /></ProtectedRoute>} />
+          <Route path="/daily" element={<ProtectedRoute><DailyPage db={db} setDb={setDb} onToggleTask={toggleDailyTask} /></ProtectedRoute>} />
+          <Route path="/projects" element={<ProtectedRoute><ProjectsPage db={db} setDb={setDb} /></ProtectedRoute>} />
+          <Route path="/roadmap" element={<ProtectedRoute><RoadmapPage db={db} setDb={setDb} /></ProtectedRoute>} />
+          <Route path="/notes" element={<ProtectedRoute><NotesPage notes={db.modules_data.learning_notes} onAddNote={handleAddNote} /></ProtectedRoute>} />
+          <Route path="/jobs" element={<ProtectedRoute><JobsPage jobs={db.modules_data.job_tracker} onAddJob={handleAddJob} /></ProtectedRoute>} />
+          <Route path="/finnish" element={<ProtectedRoute><FinnishPage logs={db.modules_data.finnish_tracker} onAddPractice={handleAddFinnishLog} /></ProtectedRoute>} />
+          <Route path="/history/:tab" element={<ProtectedRoute><HistoryPage db={db} onLogCommit={handleLogCommit} /></ProtectedRoute>} />
 
-          <Route
-            path="/projects"
-            element={
-              <ProtectedRoute>
-                <ProjectsPage db={db} setDb={setDb} />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/roadmap"
-            element={
-              <ProtectedRoute>
-                <RoadmapPage
-                  db={db}
-                  setDb={setDb}
-                />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/notes"
-            element={
-              <ProtectedRoute>
-                <NotesPage notes={db.modules_data.learning_notes} onAddNote={handleAddNote} />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/jobs"
-            element={
-              <ProtectedRoute>
-                <JobsPage jobs={db.modules_data.job_tracker} onAddJob={handleAddJob} />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/finnish"
-            element={
-              <ProtectedRoute>
-                <FinnishPage logs={db.modules_data.finnish_tracker} onAddPractice={handleAddFinnishLog} />
-              </ProtectedRoute>
-            }
-          />
-
-          <Route
-            path="/history/:tab"
-            element={
-              <ProtectedRoute>
-                <HistoryPage db={db} onLogCommit={handleLogCommit} />
-              </ProtectedRoute>
-            }
-          />
+          {/* Catch-all Wildcard Re-route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
 
       <Footer onOpenAdmin={() => setIsAdminOpen(true)} />
+
+      <button
+        onClick={toggleTheme}
+        className="fixed bottom-6 right-6 z-50 flex items-center justify-center font-mono text-xs font-bold tracking-wider px-4 py-2.5 rounded-full border border-dynamic bg-[var(--nav-bg)] shadow-lg backdrop-blur-md hover:scale-105 transition-all cursor-pointer select-none"
+        style={{ color: 'var(--accent-color)' }}
+        title="Switch Interface Matrix"
+      >
+        {theme === 'cosmic' ? '💎 LIGHT' : '🪐 COSMIC'}
+      </button>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider>
+      <AppContent />
+    </ThemeProvider>
   );
 }

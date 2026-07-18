@@ -1,4 +1,3 @@
-// src/pages/Github.tsx
 import React, { useState, useEffect, useMemo } from 'react';
 
 interface GHProfile {
@@ -58,10 +57,13 @@ const LANGUAGE_CONFIG: Record<string, { color: string; icon: string; glow: strin
   'Default': { color: '#9ca3af', icon: '📁', glow: 'rgba(156, 163, 175, 0.08)' }
 };
 
-// Change this to your exact username to sync your real repositories
 const GITHUB_USERNAME = "aakash-develops";
 
-const GithubPage: React.FC = () => {
+interface GithubPageProps {
+  currentTheme?: 'cosmic' | 'crystal';
+}
+
+export default function GithubPage({ currentTheme }: GithubPageProps) {
   const [profile, setProfile] = useState<GHProfile | null>(null);
   const [repos, setRepos] = useState<GHRepo[]>([]);
   const [events, setEvents] = useState<GHEvent[]>([]);
@@ -139,10 +141,10 @@ const GithubPage: React.FC = () => {
     let tierColor = '#9ca3af';
     if (total >= 85) {
       tier = 'Diamond';
-      tierColor = '#00f5ff';
+      tierColor = currentTheme === 'crystal' ? '#0284c7' : '#00f5ff';
     } else if (total >= 60) {
       tier = 'Gold';
-      tierColor = '#f1e05a';
+      tierColor = '#eab308';
     }
 
     return { total, breakdown: { documentation, activity, maturity, engagement }, tier, tierColor };
@@ -175,7 +177,7 @@ const GithubPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh', color: '#4f8cff', fontSize: '14px', fontWeight: 'bold', fontFamily: 'monospace' }}>
+      <div className="min-h-[60vh] flex items-center justify-center font-mono text-xs font-bold animate-pulse" style={{ color: 'var(--accent-color)' }}>
         🌐 INITIALIZING SECURE GITHUB TELEMETRY DATA STREAM...
       </div>
     );
@@ -183,7 +185,7 @@ const GithubPage: React.FC = () => {
 
   if (error) {
     return (
-      <div style={{ textAlign: 'center', padding: '40px', color: '#ef4444', background: 'rgba(239, 68, 68, 0.04)', borderRadius: '16px', border: '1px solid rgba(239, 68, 68, 0.2)', maxWidth: '600px', margin: '40px auto', fontFamily: 'monospace' }}>
+      <div className="max-w-2xl mx-auto my-10 p-10 text-center font-mono text-sm border border-red-500/30 rounded-2xl bg-red-500/5 text-red-500">
         💥 SYSTEM EXCEPTION: {error}
       </div>
     );
@@ -193,75 +195,81 @@ const GithubPage: React.FC = () => {
   const selectedLangConfig = selectedRepo ? (LANGUAGE_CONFIG[selectedRepo.language || ''] || LANGUAGE_CONFIG['Default']) : null;
 
   return (
-    <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '40px 24px', color: '#fff', fontFamily: 'system-ui, -apple-system, sans-serif', boxSizing: 'border-box' }}>
-      <style>{`
-        .gh-dashboard-layout { display: grid; grid-template-columns: 330px 1fr; gap: 32px; align-items: start; }
-        .gh-card-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
-        .glass-panel { background: rgba(13, 13, 18, 0.6); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 16px; padding: 24px; box-sizing: border-box; }
-        .repo-card { cursor: pointer; transition: all 0.3s ease; }
-        .repo-card:hover { transform: translateY(-5px); border-color: rgba(255,255,255,0.15) !important; }
-        .terminal-log { background: #060609; border: 1px solid #171722; font-family: monospace; padding: 16px; border-radius: 12px; font-size: 13px; color: #38bdf8; overflow-y: auto; max-height: 180px; }
-        @media (max-width: 1300px) { .gh-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (max-width: 992px) { .gh-dashboard-layout { grid-template-columns: 1fr; } }
-        @media (max-width: 680px) { .gh-card-grid { grid-template-columns: 1fr; } }
-      `}</style>
+    <div className="max-w-7xl mx-auto px-6 py-14 text-dynamic-primary relative">
 
       {/* HEADER SECTION */}
-      <div style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '20px' }}>
+      <div className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-5">
         <div>
-          <h2 style={{ fontSize: '32px', fontWeight: 800, margin: '0 0 6px 0', letterSpacing: '-0.8px' }}>Ecosystem Telemetry</h2>
-          <p style={{ margin: 0, fontSize: '14px', color: 'rgba(255,255,255,0.4)' }}>Real-time public code indexing engine with algorithmic documentation auditing modules.</p>
+          <h1 className="text-3xl font-extrabold tracking-tight mb-1">Ecosystem Telemetry</h1>
+          <p className="text-sm text-dynamic-secondary">
+            Real-time public code indexing engine with algorithmic documentation auditing modules.
+          </p>
         </div>
         {profile && (
-          <a href={profile.html_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '12px 20px', color: '#38bdf8', fontSize: '13px', fontWeight: 600 }}>
+          <a
+            href={profile.html_url}
+            target="_blank"
+            rel="noreferrer"
+            className="text-xs font-bold tracking-wider font-mono uppercase px-5 py-3 rounded-full border border-dynamic bg-[var(--pill-bg)] hover:opacity-80 transition-opacity"
+            style={{ color: 'var(--accent-color)' }}
+          >
             🐙 Source Connection Profile
           </a>
         )}
       </div>
 
-      <div className="gh-dashboard-layout">
-        {/* SIDEBAR PANEL */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {profile && (
-            <div className="glass-panel" style={{ textAlign: 'center', borderTop: '2px solid #38bdf8' }}>
-              <img src={profile.avatar_url} alt="Avatar" style={{ width: '100px', height: '100px', borderRadius: '50%', border: '2px solid rgba(56, 189, 248, 0.3)', padding: '5px', marginBottom: '16px' }} />
-              <h3 style={{ margin: '0 0 4px 0', fontSize: '22px', fontWeight: 800 }}>{profile.name || profile.login}</h3>
-              <div style={{ color: '#38bdf8', fontSize: '13px', fontWeight: 700, fontFamily: 'monospace', marginBottom: '14px' }}>@{profile.login}</div>
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', margin: '0 0 24px 0', lineHeight: '1.6' }}>{profile.bio || "No profile bio setup."}</p>
+      {/* CORE WORKSPACE GRID */}
+      <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8 items-start">
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '18px' }}>
+        {/* SIDEBAR MODULES */}
+        <div className="flex flex-col gap-6">
+          {profile && (
+            <div
+              className="p-6 rounded-3xl backdrop-blur-xl border flex flex-col items-center text-center shadow-premium bg-[var(--bg-glass)] border-[var(--border-glass)]"
+              style={{ borderTop: '2px solid var(--accent-color)' }}
+            >
+              <img
+                src={profile.avatar_url}
+                alt="Avatar"
+                className="w-24 h-24 rounded-full p-1 mb-4 border border-dynamic"
+              />
+              <h3 className="text-xl font-bold mb-0.5">{profile.name || profile.login}</h3>
+              <div className="text-xs font-mono font-bold mb-4" style={{ color: 'var(--accent-color)' }}>@{profile.login}</div>
+              <p className="text-xs text-dynamic-secondary leading-relaxed mb-6">{profile.bio || "No profile bio setup."}</p>
+
+              <div className="w-full grid grid-cols-2 gap-3 pt-5 border-t border-dynamic">
                 <div>
-                  <div style={{ fontSize: '22px', fontWeight: 800 }}>{profile.public_repos}</div>
-                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Repositories</div>
+                  <div className="text-xl font-extrabold">{profile.public_repos}</div>
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-dynamic-secondary opacity-60">Repositories</div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '22px', fontWeight: 800 }}>{profile.followers}</div>
-                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Followers</div>
+                  <div className="text-xl font-extrabold">{profile.followers}</div>
+                  <div className="text-[10px] font-mono uppercase tracking-wider text-dynamic-secondary opacity-60">Followers</div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* COMPOSITION CHART */}
-          <div className="glass-panel">
-            <h4 style={{ margin: '0 0 16px 0', fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Language Matrix</h4>
+          {/* COMPOSITION CHART MODULE */}
+          <div className="p-6 rounded-3xl backdrop-blur-xl border shadow-premium bg-[var(--bg-glass)] border-[var(--border-glass)]">
+            <h4 className="text-[11px] font-mono uppercase tracking-wider text-dynamic-secondary opacity-60 mb-4">Language Matrix</h4>
             {languageDistribution.length === 0 ? (
-              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)' }}>Zero compiled assets found.</div>
+              <div className="text-xs text-dynamic-secondary opacity-40 font-mono">Zero compiled assets found.</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', width: '100%', height: '8px', borderRadius: '99px', overflow: 'hidden', background: 'rgba(255,255,255,0.05)' }}>
+              <div className="flex flex-col gap-4">
+                <div className="w-full h-2 rounded-full overflow-hidden bg-[var(--pill-bg)] flex">
                   {languageDistribution.map(item => (
-                    <div key={item.lang} style={{ width: `${item.percentage}%`, background: item.config.color }} />
+                    <div key={item.lang} style={{ width: `${item.percentage}%`, backgroundColor: item.config.color }} />
                   ))}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div className="flex flex-col gap-2.5">
                   {languageDistribution.map(item => (
-                    <div key={item.lang} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '13px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: item.config.color }} />
-                        <span style={{ color: 'rgba(255,255,255,0.85)' }}>{item.lang}</span>
+                    <div key={item.lang} className="flex justify-between items-center text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: item.config.color }} />
+                        <span className="text-dynamic-primary font-medium">{item.lang}</span>
                       </div>
-                      <span style={{ color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>{item.percentage}%</span>
+                      <span className="text-dynamic-secondary font-mono opacity-80">{item.percentage}%</span>
                     </div>
                   ))}
                 </div>
@@ -270,27 +278,28 @@ const GithubPage: React.FC = () => {
           </div>
         </div>
 
-        {/* FEED SECTION */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', width: '100%' }}>
+        {/* CONTROLS FEED MONITOR & REPOSITORIES STREAM */}
+        <div className="flex flex-col gap-6">
+
           {/* TERMINAL MONITOR */}
-          <div className="glass-panel" style={{ padding: '20px' }}>
-            <h4 style={{ margin: '0 0 12px 0', fontSize: '12px', color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ display: 'inline-block', width: '6px', height: '6px', borderRadius: '50%', background: '#38bdf8' }} />
+          <div className="p-5 rounded-3xl backdrop-blur-xl border shadow-premium bg-[var(--bg-glass)] border-[var(--border-glass)]">
+            <h4 className="text-[11px] font-mono uppercase tracking-wider mb-3 flex items-center gap-2" style={{ color: 'var(--accent-color)' }}>
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse inline-block" style={{ backgroundColor: 'var(--accent-color)' }} />
               VIRTUAL WEBHOOK STREAM CONSOLE
             </h4>
-            <div className="terminal-log">
+            <div className="bg-black/20 p-4 rounded-xl border border-dynamic font-mono text-xs max-h-44 overflow-y-auto space-y-3" style={{ color: 'var(--secondary-accent)' }}>
               {events.length === 0 ? (
-                <div style={{ color: 'rgba(255,255,255,0.3)' }}>&gt; Monitoring baseline telemetry hooks... standing by for push events.</div>
+                <div className="opacity-40">&gt; Monitoring baseline telemetry hooks... standing by for push events.</div>
               ) : (
                 events.map((e, index) => {
                   const timestamp = new Date(e.created_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
                   return (
-                    <div key={e.id} style={{ marginBottom: index === events.length - 1 ? '0' : '10px' }}>
-                      <span style={{ color: 'rgba(255,255,255,0.25)' }}>[{timestamp}]</span>{' '}
-                      <span style={{ color: '#a7f3d0' }}>&gt; GIT_PUSH</span> to{' '}
-                      <span style={{ color: '#38bdf8', fontWeight: 'bold' }}>{e.repo.name.split('/')[1]}</span>
+                    <div key={e.id}>
+                      <span className="opacity-30">[{timestamp}]</span>{' '}
+                      <span className="text-emerald-400 font-bold">&gt; GIT_PUSH</span> to{' '}
+                      <span className="text-dynamic-primary font-bold">{e.repo.name.split('/')[1]}</span>
                       {e.payload.commits?.map((c, idx) => (
-                        <div key={idx} style={{ paddingLeft: '16px', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic', fontSize: '12px' }}>
+                        <div key={idx} className="pl-4 text-[11px] text-dynamic-secondary italic mt-0.5">
                           ↳ message: "{c.message}"
                         </div>
                       ))}
@@ -301,8 +310,8 @@ const GithubPage: React.FC = () => {
             </div>
           </div>
 
-          {/* REPOSITORY GRID */}
-          <div className="gh-card-grid">
+          {/* REPOSITORY STREAM GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {repos.map(repo => {
               const langConfig = LANGUAGE_CONFIG[repo.language || ''] || LANGUAGE_CONFIG['Default'];
               const healthScore = calculateProjectHealth(repo);
@@ -311,34 +320,38 @@ const GithubPage: React.FC = () => {
                 <div
                   key={repo.id}
                   onClick={() => handleOpenDrawer(repo)}
-                  className="glass-panel repo-card"
+                  className="p-6 rounded-3xl backdrop-blur-xl border flex flex-col justify-between min-h-[220px] transition-all duration-300 hover:-translate-y-1 cursor-pointer bg-[var(--bg-glass)] border-[var(--border-glass)] hover:border-dynamic shadow-premium"
                   style={{
-                    display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: '210px',
-                    background: `linear-gradient(145deg, rgba(13,13,18,0.85) 0%, ${langConfig.glow} 100%)`
+                    background: currentTheme !== 'crystal'
+                      ? `linear-gradient(145deg, rgba(15,10,25,0.6) 0%, ${langConfig.glow} 100%)`
+                      : undefined
                   }}
                 >
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                      <span style={{ fontSize: '10px', color: healthScore.tierColor, border: `1px solid ${healthScore.tierColor}33`, background: `${healthScore.tierColor}0a`, padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' }}>
+                    <div className="flex justify-between items-center mb-3">
+                      <span
+                        className="text-[9px] font-mono tracking-wider uppercase px-2 py-0.5 rounded border font-bold"
+                        style={{ color: healthScore.tierColor, borderColor: `${healthScore.tierColor}33`, backgroundColor: `${healthScore.tierColor}0a` }}
+                      >
                         {healthScore.tier} Tier
                       </span>
-                      <span style={{ fontSize: '12px', fontWeight: '700', color: healthScore.tierColor, fontFamily: 'monospace' }}>
+                      <span className="text-xs font-mono font-bold" style={{ color: healthScore.tierColor }}>
                         {healthScore.total}%
                       </span>
                     </div>
-                    <h4 style={{ margin: '0 0 6px 0', fontSize: '16px', fontWeight: '700', color: '#fff', wordBreak: 'break-word' }}>{repo.name}</h4>
-                    <p style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.45)', margin: '0 0 16px 0', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                      {repo.description || "No project description payload provided."}
+                    <h4 className="text-base font-bold text-dynamic-primary mb-1 line-clamp-1">{repo.name}</h4>
+                    <p className="text-xs text-dynamic-secondary leading-relaxed line-clamp-3 mb-4">
+                      {repo.description || "Active production software system layout layout template."}
                     </p>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '12px' }}>
-                    <div style={{ display: 'flex', gap: '10px', fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontFamily: 'monospace' }}>
+                  <div className="flex justify-between items-center pt-3 border-t border-dynamic">
+                    <div className="flex gap-3 text-[11px] font-mono text-dynamic-secondary opacity-70">
                       <span>⭐ {repo.stargazers_count}</span>
                       <span>🍴 {repo.forks_count}</span>
                     </div>
                     {repo.language && (
-                      <span style={{ fontSize: '11px', fontWeight: 600, color: langConfig.color }}>
+                      <span className="text-[11px] font-bold tracking-wide" style={{ color: langConfig.color }}>
                         {langConfig.icon} {repo.language}
                       </span>
                     )}
@@ -350,59 +363,95 @@ const GithubPage: React.FC = () => {
         </div>
       </div>
 
-      {/* INSPECTOR DRAWER */}
-      <div style={{ position: 'fixed', top: 0, right: isDrawerOpen ? 0 : '-460px', width: '100%', maxWidth: '440px', height: '100vh', background: 'rgba(8, 8, 12, 0.95)', backdropFilter: 'blur(24px)', borderLeft: '1px solid rgba(255, 255, 255, 0.08)', zIndex: 10000, transition: 'right 0.35s ease', padding: '32px 24px', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      {/* INSPECTOR CONSOLE DRAWER */}
+      <div
+        className={`fixed top-0 bottom-0 y-0 right-0 h-screen w-full max-w-md backdrop-blur-2xl border-l border-dynamic z-50 p-8 flex flex-col justify-between transition-all duration-500 ease-in-out bg-black/90 ${
+          isDrawerOpen ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+        }`}
+      >
         {selectedRepo && selectedHealth && selectedLangConfig && (
           <>
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>// ANALYSIS CONSOLE</span>
-                <button onClick={handleCloseDrawer} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '18px' }}>✕</button>
+              <div className="flex justify-between items-center mb-6">
+                <span className="text-[10px] font-mono tracking-widest text-dynamic-secondary opacity-50">// ANALYSIS CONSOLE</span>
+                <button
+                  onClick={handleCloseDrawer}
+                  className="bg-transparent border-none text-dynamic-secondary hover:text-dynamic-primary text-lg cursor-pointer transition-colors"
+                >
+                  ✕
+                </button>
               </div>
 
-              <h3 style={{ margin: '0 0 6px 0', fontSize: '22px', color: '#fff' }}>{selectedRepo.name}</h3>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '20px' }}>
-                <span style={{ fontSize: '12px', color: selectedLangConfig.color, background: 'rgba(255,255,255,0.03)', padding: '2px 8px', borderRadius: '4px' }}>{selectedRepo.language || 'General Stack'}</span>
-                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>Updated {new Date(selectedRepo.updated_at).toLocaleDateString('en-GB')}</span>
+              <h3 className="text-2xl font-bold text-white mb-1.5">{selectedRepo.name}</h3>
+              <div className="flex flex-wrap gap-2.5 items-center mb-6 text-xs">
+                <span className="px-2.5 py-0.5 rounded-md font-medium bg-white/5" style={{ color: selectedLangConfig.color }}>
+                  {selectedRepo.language || 'General Stack'}
+                </span>
+                <span className="text-white/40 font-mono">
+                  Updated {new Date(selectedRepo.updated_at).toLocaleDateString('en-GB')}
+                </span>
               </div>
 
-              <div style={{ background: '#050508', border: '1px solid #14141c', borderRadius: '12px', padding: '16px', fontFamily: 'monospace', fontSize: '13px', color: 'rgba(255,255,255,0.7)', marginBottom: '24px' }}>
-                <div style={{ color: '#38bdf8', fontWeight: 'bold' }}>📁 root/</div>
-                <div style={{ paddingLeft: '14px', color: '#10b981' }}>📁 src/</div>
-                <div style={{ paddingLeft: '28px' }}>📄 App.tsx</div>
-                <div style={{ paddingLeft: '14px', display: 'flex', justifyContent: 'space-between' }}>
-                  <span>📄 README.md</span>
-                  <span style={{ color: selectedHealth.breakdown.documentation > 0 ? '#10b981' : '#ef4444' }}>{selectedHealth.breakdown.documentation > 0 ? '✓ FOUND' : '✖ MISSING'}</span>
+              {/* MOCK TREE VIEW */}
+              <div className="bg-black/40 p-4 rounded-xl border border-white/5 font-mono text-xs text-white/70 space-y-1.5 mb-6">
+                <div style={{ color: 'var(--accent-color)' }} className="font-bold">📁 root/</div>
+                <div className="pl-4 text-emerald-400 font-semibold">📁 src/</div>
+                <div className="pl-8 opacity-60">📄 App.tsx</div>
+                <div className="pl-4 flex justify-between items-center">
+                  <span className="opacity-60">📄 README.md</span>
+                  <span className={`text-[10px] font-bold ${selectedHealth.breakdown.documentation > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {selectedHealth.breakdown.documentation > 0 ? '✓ FOUND' : '✖ MISSING'}
+                  </span>
                 </div>
               </div>
 
+              {/* AUDIT METRICS MATRIX */}
               <div>
-                <h4 style={{ margin: '0 0 14px 0', fontSize: '12px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Audit Metrics ({selectedHealth.total}%)</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <h4 className="text-[11px] font-mono uppercase tracking-wider text-white/40 mb-4">
+                  Audit Metrics ({selectedHealth.total}%)
+                </h4>
+                <div className="flex flex-col gap-4">
                   {Object.entries(selectedHealth.breakdown).map(([key, val]) => (
                     <div key={key}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', marginBottom: '4px' }}>
-                        <span style={{ color: 'rgba(255,255,255,0.6)', textTransform: 'capitalize' }}>{key}</span>
-                        <span style={{ fontFamily: 'monospace' }}>{val}</span>
+                      <div className="flex justify-between text-xs mb-1.5">
+                        <span className="text-white/60 capitalize">{key}</span>
+                        <span className="font-mono text-white font-semibold">{val}</span>
                       </div>
-                      <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px' }}>
-                        <div style={{ height: '100%', background: '#38bdf8', width: `${(val / (key === 'maturity' || key === 'engagement' ? 20 : 30)) * 100}%` }} />
+                      <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            backgroundColor: 'var(--accent-color)',
+                            width: `${(val / (key === 'maturity' || key === 'engagement' ? 20 : 30)) * 100}%`
+                          }}
+                        />
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
             </div>
-            <a href={selectedRepo.html_url} target="_blank" rel="noreferrer" style={{ display: 'block', textDecoration: 'none', background: '#38bdf8', color: '#000', textAlign: 'center', padding: '14px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold' }}>
-              🐙 Launch Codebase
+
+            <a
+              href={selectedRepo.html_url}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full text-center text-xs font-bold tracking-widest font-mono uppercase p-4 rounded-xl text-white block transition-transform active:scale-95 shadow-lg"
+              style={{ backgroundColor: 'var(--accent-color)' }}
+            >
+              🐙 Launch Codebase ↗
             </a>
           </>
         )}
       </div>
 
-      {isDrawerOpen && <div onClick={handleCloseDrawer} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)', zIndex: 9999 }} />}
+      {/* DRAWER LAYER BLOCKS */}
+      {isDrawerOpen && (
+        <div
+          onClick={handleCloseDrawer}
+          className="fixed inset-0 w-screen h-screen bg-black/30 backdrop-blur-xs z-40 transition-opacity duration-300"
+        />
+      )}
     </div>
   );
-};
-
-export default GithubPage;
+}
