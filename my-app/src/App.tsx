@@ -4,6 +4,7 @@ import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 // 1. Data Schemas & Types
 import initialSchema from './data/initialSchema.json';
 import type { AppDatabaseState } from './types/schema';
+import { FULL_CURRICULUM_DATA } from './types/curriculumData';
 
 // 2. Global Layout Components & Providers
 import TopNavbar from './components/layout/TopNavbar';
@@ -11,6 +12,7 @@ import Footer from './components/footer/footer';
 import AdminPanel from './components/admin/AdminPanel';
 import { CosmicBackground } from './components/cosmic/CosmicBackground';
 import { ThemeProvider, useTheme } from './components/layout/ThemeProvider';
+import { CvWorkshop } from './components/CV workshop/CvWorkshop';
 
 // 3. Operational Target Pages
 import MainEntrance from './pages/WelcomePage';
@@ -31,12 +33,11 @@ function AppContent() {
   const [isAdminOpen, setIsAdminOpen] = useState<boolean>(false);
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
-  // AUTH STATE TRACKING (Listens to local storage updates across routes)
+  // AUTH STATE TRACKING
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return !!localStorage.getItem('sys_session_token');
   });
 
-  // Track state changes dynamically when storage changes
   useEffect(() => {
     const checkAuth = () => {
       setIsAuthenticated(!!localStorage.getItem('sys_session_token'));
@@ -60,17 +61,52 @@ function AppContent() {
           "ML LeetCode Core": [false, false, false, false, false, false, false],
           "Anki Fin Vocab": [false, false, false, false, false, false, false],
           "Paper Reading / Arxiv": [false, false, false, false, false, false, false]
-        }
+        },
+        ml_roadmap_matrix: FULL_CURRICULUM_DATA || [],
+        cv_workshop: {
+  master_profile: {
+    contact: {
+      phone: "+358 000 00000",
+      email: "aakashbasnet.info@gmail.com",
+      address: "Kauniainen, Finland"
+    },
+    aboutMe: "Full-Stack & Machine Learning Software Engineer",
+    experiences: [],
+    education: [],
+    skills: {
+      technical: ["React", "TypeScript", "Node.js", "Python", "PyTorch"],
+      personal: ["Problem Solving", "Team Leadership"]
+    },
+    certifications: [],
+    languages: [],
+    hobbies: [],
+    achievements: []
+  },
+  saved_tailored_cvs: []
+}
       }
     } as unknown as AppDatabaseState;
   });
 
-  // DB Sync Engines
+  // DB Sync Engines (GET Request)
   useEffect(() => {
-    fetch('http://localhost:5000/api/db')
+    fetch('http://localhost:5000/api/db', { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
-        if (data && data.modules_data) setDb(data);
+        if (data && data.modules_data) {
+          const matrixArray = data.modules_data.ml_roadmap_matrix;
+          const isValidAndPopulated = Array.isArray(matrixArray) && matrixArray.length > 0;
+
+          const mergedData = {
+            ...data,
+            modules_data: {
+              ...data.modules_data,
+              ml_roadmap_matrix: isValidAndPopulated ? matrixArray : (FULL_CURRICULUM_DATA || [])
+            }
+          };
+
+          setDb(mergedData);
+        }
         setIsLoaded(true);
       })
       .catch((err) => {
@@ -79,8 +115,10 @@ function AppContent() {
       });
   }, []);
 
+  // Continuous auto-save to Backend (POST Request)
   useEffect(() => {
     if (!isLoaded) return;
+
     fetch('http://localhost:5000/api/db', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -88,13 +126,14 @@ function AppContent() {
     }).catch((err) => console.error("Failed to sync updates:", err));
   }, [db, isLoaded]);
 
-  // MUTATOR IMPLEMENTATIONS (Forwarded down to child branches cleanly)
+  // MUTATOR IMPLEMENTATIONS
   const toggleDailyTask = (time: string) => {
     setDb((prev) => ({
       ...prev,
       daily_progress_clicks: { ...prev.daily_progress_clicks, [time]: !prev.daily_progress_clicks[time] },
     }));
   };
+
   const handleAddNote = (noteText: string) => {
     if (!noteText.trim()) return;
     setDb((prev) => ({
@@ -105,6 +144,7 @@ function AppContent() {
       },
     }));
   };
+
   const handleAddJob = (company: string, role: string) => {
     if (!company.trim() || !role.trim()) return;
     setDb((prev) => ({
@@ -115,6 +155,7 @@ function AppContent() {
       },
     }));
   };
+
   const handleAddFinnishLog = (activity: string, minutes: number) => {
     if (!activity.trim() || minutes <= 0) return;
     setDb((prev) => ({
@@ -125,17 +166,7 @@ function AppContent() {
       },
     }));
   };
-  const handleToggleHabitDay = (habitName: string, dayIndex: number) => {
-    setDb((prev) => {
-      const currentTracker = { ...prev.modules_data.habit_tracker };
-      if (currentTracker[habitName]) {
-        const updatedDays = [...currentTracker[habitName]];
-        updatedDays[dayIndex] = !updatedDays[dayIndex];
-        currentTracker[habitName] = updatedDays;
-      }
-      return { ...prev, modules_data: { ...prev.modules_data, habit_tracker: currentTracker } };
-    });
-  };
+
   const handleLogCommit = (repoId: string) => {
     setDb((prev) => ({
       ...prev,
@@ -147,6 +178,20 @@ function AppContent() {
       },
     }));
   };
+  const handleUpdateMasterProfile = (updatedProfile: any) => {
+  console.log("Updating Master Profile", updatedProfile);
+
+  setDb((prev) => ({
+    ...prev,
+    modules_data: {
+      ...prev.modules_data,
+      cv_workshop: {
+        ...prev.modules_data.cv_workshop,
+        master_profile: updatedProfile,
+      },
+    },
+  }));
+};
 
   // Metrics Crunchers
   const currentDailyTasks = Object.values(db.daily_progress_clicks || {}).filter(Boolean).length;
@@ -163,15 +208,12 @@ function AppContent() {
     habitConsistencyStr: `${db.modules_data.habit_tracker ? Math.round((Object.values(db.modules_data.habit_tracker).reduce((acc: number, arr) => acc + arr.filter(Boolean).length, 0) / Object.values(db.modules_data.habit_tracker).reduce((acc: number, arr) => acc + arr.length, 0)) * 100) : 0}%`
   };
 
-  // 🚀 UPDATED: Suppresses TopNavbar on both the external portfolio page and the internal portal portal entry
   const isSplashPage = location.pathname === '/' || location.pathname === '/MainEntrance';
 
-  // 🔒 FIREWALL: Prevents non-authenticated users from reading inside pages
   const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return localStorage.getItem('sys_session_token') ? <>{children}</> : <Navigate to="/" replace />;
   };
 
-  // 🛑 GATED HUB: Prevents logged-in users from going back to the login screen via back button
   const PublicOnlyRoute = ({ children }: { children: React.ReactNode }) => {
     return localStorage.getItem('sys_session_token') ? <Navigate to="/dashboard" replace /> : <>{children}</>;
   };
@@ -179,7 +221,10 @@ function AppContent() {
   if (isAdminOpen) {
     return <AdminPanel db={db} setDb={setDb} onClose={() => setIsAdminOpen(false)} />;
   }
-
+console.log(
+  "APP PROFILE",
+  db.modules_data?.cv_workshop?.master_profile
+);
   return (
     <div className="app flex flex-col min-h-screen justify-between relative bg-transparent">
       <CosmicBackground theme={theme} />
@@ -188,15 +233,23 @@ function AppContent() {
         {!isSplashPage && <TopNavbar currentWeek={db.system_config?.current_active_week} />}
 
         <Routes>
-          {/* Public Website Layer */}
           <Route path="/" element={<PortfolioPage db={db} onToggleTheme={toggleTheme} currentTheme={theme} />} />
           <Route path="/github" element={<GitHubPage />} />
-
-          {/* Lock Screen (Blocks Back Navigation if already logged in) */}
           <Route path="/MainEntrance" element={<PublicOnlyRoute><MainEntrance /></PublicOnlyRoute>} />
-
-          {/* Secure Protected Core Channels */}
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard db={db} metrics={dashboardMetrics} /></ProtectedRoute>} />
+          <Route
+            path="/cv-workshop"
+            element={
+              <ProtectedRoute>
+                <CvWorkshop
+                  key={db?.modules_data?.cv_workshop?.master_profile?.email || 'cv-workshop-key'}
+                  db={db}
+                  setDb={setDb}
+                  masterProfile={db?.modules_data?.cv_workshop?.master_profile}
+                />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/daily" element={<ProtectedRoute><DailyPage db={db} setDb={setDb} onToggleTask={toggleDailyTask} /></ProtectedRoute>} />
           <Route path="/projects" element={<ProtectedRoute><ProjectsPage db={db} setDb={setDb} /></ProtectedRoute>} />
           <Route path="/roadmap" element={<ProtectedRoute><RoadmapPage db={db} setDb={setDb} /></ProtectedRoute>} />
@@ -204,8 +257,6 @@ function AppContent() {
           <Route path="/jobs" element={<ProtectedRoute><JobsPage jobs={db.modules_data.job_tracker} onAddJob={handleAddJob} /></ProtectedRoute>} />
           <Route path="/finnish" element={<ProtectedRoute><FinnishPage logs={db.modules_data.finnish_tracker} onAddPractice={handleAddFinnishLog} /></ProtectedRoute>} />
           <Route path="/history/:tab" element={<ProtectedRoute><HistoryPage db={db} onLogCommit={handleLogCommit} /></ProtectedRoute>} />
-
-          {/* Catch-all Wildcard Re-route */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>

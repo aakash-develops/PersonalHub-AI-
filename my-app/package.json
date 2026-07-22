@@ -8,16 +8,27 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+
+    "ollama": "\"C:\\Users\\Aakash\\AppData\\Local\\Programs\\Ollama\\ollama.exe\" serve",
+
     "backend": "node ../ml-os-backend/server.js",
-    "dev:all": "concurrently \"npm run dev\" \"npm run backend\" --names \"VITE,SERVER\" --prefix-colors \"cyan,magenta\""
+
+    "dev:all": "concurrently -k --names \"OLLAMA,VITE,SERVER\" --prefix-colors \"green,cyan,magenta\" \"npm run ollama\" \"npm run dev\" \"npm run backend\""
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.2",
-    "lucide-react": "^1.24.0",
+    "fuzzball": "^2.2.6",
+    "lucide-react": "^1.25.0",
+    "mammoth": "^1.12.0",
+    "pdfjs-dist": "^6.1.200",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1",
-    "tailwindcss": "^4.3.2"
+    "react-to-print": "^3.3.0",
+    "tailwindcss": "^4.3.2",
+    "tesseract.js": "^7.0.0",
+    "wink-eng-lite-web-model": "^1.8.1",
+    "wink-nlp": "^2.4.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

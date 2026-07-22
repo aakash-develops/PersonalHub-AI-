@@ -1,4 +1,5 @@
 // src/types/schema.ts
+import type { MasterProfileData } from '../components/CV workshop/types/cvTypes';
 
 export interface SystemConfig {
   current_active_week: number;
@@ -37,5 +38,11 @@ export interface AppDatabaseState {
     job_tracker: Array<{ id: string; company: string; role: string; status: string; date_applied: string }>;
     finnish_tracker: Array<{ id: string; activity: string; minutes_spent: number; date: string }>;
     habit_tracker: Record<string, boolean[]>;
-  }
+
+    // 🟢 ADD THIS RIGHT HERE INSIDE modules_data:
+    cv_workshop?: {
+      master_profile: MasterProfileData;
+      saved_tailored_cvs?: any[];
+    };
+  };
 }
